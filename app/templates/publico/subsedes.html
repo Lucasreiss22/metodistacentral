@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block titulo %}Subsedes — {{ configuracao.nome_igreja }}{% endblock %}
+{% block conteudo %}
+  <h1>Subsedes</h1>
+  {% for subsede in subsedes %}
+    <article>
+      <h2>{{ subsede.nome }}{% if subsede.eh_sede %} (sede){% endif %}</h2>
+      <p>
+        {{ subsede.endereco }}
+        {% if subsede.bairro %} — {{ subsede.bairro }}{% endif %}
+        {% if subsede.cidade %} — {{ subsede.cidade }}{% endif %}
+        {% if subsede.uf %}/{{ subsede.uf }}{% endif %}
+      </p>
+      {% if subsede.horarios_culto %}<p>{{ subsede.horarios_culto }}</p>{% endif %}
+      {% if subsede.pastor_responsavel %}<p>Pastor: {{ subsede.pastor_responsavel }}</p>{% endif %}
+      {% if subsede.whatsapp %}
+        <p><a href="{{ link_wa_me(subsede.whatsapp, 'Olá, paz.') }}">WhatsApp</a></p>
+      {% endif %}
+      {% if subsede.instagram_url %}
+        <p><a href="{{ subsede.instagram_url }}">Instagram</a></p>
+      {% endif %}
+      {% if subsede.mapa_url %}
+        <p><a href="{{ subsede.mapa_url }}">Como chegar</a></p>
+      {% endif %}
+    </article>
+  {% else %}
+    <p>Nenhuma subsede publicada.</p>
+  {% endfor %}
+{% endblock %}

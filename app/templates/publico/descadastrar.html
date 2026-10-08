@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block titulo %}Descadastro — {{ configuracao.nome_igreja }}{% endblock %}
+{% block conteudo %}
+  {% if encontrado %}
+    <h1>Descadastro feito</h1>
+    <p>Você não receberá mais os comunicados por e-mail.</p>
+  {% else %}
+    <h1>Link inválido</h1>
+    <p>Não encontramos esse descadastro.</p>
+  {% endif %}
+{% endblock %}

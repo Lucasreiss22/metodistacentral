@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block titulo %}Bíblia online — {{ configuracao.nome_igreja }}{% endblock %}
+{% block conteudo %}
+  <h1>Bíblia online</h1>
+  <form method="get" action="{{ url_for('publico.biblia') }}">
+    <label for="livro">Livro</label>
+    <select id="livro" name="livro">
+      {% for livro in livros %}
+        <option value="{{ livro[0] }}" {% if resultado.livro_id == livro[0] %}selected{% endif %}>{{ livro[1] }}</option>
+      {% endfor %}
+    </select>
+    <label for="capitulo">Capítulo</label>
+    <input id="capitulo" name="capitulo" type="number" min="1" value="{{ resultado.capitulo or 1 }}">
+    <button type="submit">Abrir</button>
+  </form>
+  <script>
+    document.querySelector("form").addEventListener("submit", function (evento) {
+      evento.preventDefault();
+      var livro = document.getElementById("livro").value;
+      var capitulo = document.getElementById("capitulo").value || "1";
+      window.location = "/biblia/" + livro + "/" + capitulo;
+    });
+  </script>
+
+  {% if resultado.ok %}
+    <h2>{{ resultado.nome }} {{ resultado.capitulo }}</h2>
+    {% for numero, texto in resultado.versiculos %}
+      <p><sup>{{ numero }}</sup> {{ texto }}</p>
+    {% endfor %}
+  {% else %}
+    <p>{{ resultado.erro }}</p>
+    <p><a href="{{ resultado.link_externo }}">Abrir um leitor externo</a></p>
+  {% endif %}
+
+  <p>
+    {% if resultado.anterior %}
+      <a href="{{ url_for('publico.biblia', livro_id=resultado.anterior[0], capitulo=resultado.anterior[1]) }}">Capítulo anterior</a>
+    {% endif %}
+    {% if resultado.proximo %}
+      <a href="{{ url_for('publico.biblia', livro_id=resultado.proximo[0], capitulo=resultado.proximo[1]) }}">Próximo capítulo</a>
+    {% endif %}
+  </p>
+{% endblock %}

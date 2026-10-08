@@ -42,7 +42,9 @@ def create_app(classe_config=None):
 
     # Registra os models no SQLAlchemy. Não cria tabelas.
     from app import models  # noqa: F401
+    from app.routes.publico import bp as publico_bp
 
+    aplicacao.register_blueprint(publico_bp)
     registrar_comandos(aplicacao)
     return aplicacao
 

@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block conteudo %}
+  <p>
+    {% if configuracao.instagram_url %}
+      <a href="{{ configuracao.instagram_url }}">Instagram oficial</a>
+    {% endif %}
+    <a href="{{ url_for('publico.congregado') }}">Seja um congregado</a>
+    <a href="{{ url_for('publico.biblia') }}">Bíblia online</a>
+  </p>
+
+  {% if configuracao.sobre %}<section><h1>Sobre</h1><p>{{ configuracao.sobre }}</p></section>{% endif %}
+
+  <section>
+    <h1>Banners</h1>
+    {% for item in informativos if item.tipo == "banner" %}
+      <article>
+        <h2>{{ item.titulo }}</h2>
+        {% if item.conteudo_url %}<img src="{{ item.conteudo_url }}" alt="{{ item.titulo }}">{% endif %}
+        {% if item.texto %}<p>{{ item.texto }}</p>{% endif %}
+        {% if item.link_url %}<a href="{{ item.link_url }}">Saiba mais</a>{% endif %}
+      </article>
+    {% else %}
+      <p>Nenhum banner publicado.</p>
+    {% endfor %}
+  </section>
+
+  <section>
+    <h1>Avisos</h1>
+    {% for item in informativos if item.tipo == "aviso" %}
+      <article>
+        <h2>{{ item.titulo }}</h2>
+        <p>{{ item.texto }}</p>
+      </article>
+    {% else %}
+      <p>Nenhum aviso no momento.</p>
+    {% endfor %}
+  </section>
+
+  <section>
+    <h1>Próximos eventos</h1>
+    {% for evento in eventos %}
+      <article>
+        <h2>{{ evento.titulo }}</h2>
+        <p>{{ formatar_data_hora_br(evento.data_evento, evento.dia_inteiro) }}</p>
+        {% if evento.local %}<p>{{ evento.local }}</p>{% endif %}
+      </article>
+    {% else %}
+      <p>Nenhum evento publicado.</p>
+    {% endfor %}
+  </section>
+
+  <section>
+    <h1>Campanhas</h1>
+    {% for campanha in campanhas %}
+      <article>
+        <h2><a href="{{ url_for('publico.campanha', campanha_id=campanha.id) }}">{{ campanha.titulo }}</a></h2>
+        <p>{{ formatar_quantidade(campanha.arrecadado, campanha.unidade) }} de {{ formatar_quantidade(campanha.meta, campanha.unidade) }}</p>
+        <progress value="{{ percentual_meta(campanha.arrecadado, campanha.meta) }}" max="100"></progress>
+      </article>
+    {% else %}
+      <p>Nenhuma campanha ativa.</p>
+    {% endfor %}
+  </section>
+
+  <section>
+    <h1>Fotos</h1>
+    {% for item in informativos if item.tipo == "foto" %}
+      <figure>
+        {% if item.conteudo_url %}<img src="{{ item.conteudo_url }}" alt="{{ item.titulo }}">{% endif %}
+        <figcaption>{{ item.titulo }}</figcaption>
+      </figure>
+    {% else %}
+      <p>Nenhuma foto publicada.</p>
+    {% endfor %}
+  </section>
+
+  <section>
+    <h1>Vídeos</h1>
+    {% for item in informativos if item.tipo == "video" %}
+      <article>
+        <h2>{{ item.titulo }}</h2>
+        {% set embed = url_embed_youtube(item.conteudo_url) %}
+        {% if embed %}
+          <iframe src="{{ embed }}" title="{{ item.titulo }}" allowfullscreen></iframe>
+        {% elif item.conteudo_url %}
+          <a href="{{ item.conteudo_url }}">Assistir</a>
+        {% endif %}
+      </article>
+    {% else %}
+      <p>Nenhum vídeo publicado.</p>
+    {% endfor %}
+  </section>
+
+  <section>
+    <h1>Subsedes</h1>
+    {% for subsede in subsedes %}
+      <article>
+        <h2>{{ subsede.nome }}</h2>
+        {% if subsede.instagram_url %}
+          <a href="{{ subsede.instagram_url }}">Instagram</a>
+        {% endif %}
+      </article>
+    {% else %}
+      <p>Nenhuma subsede publicada.</p>
+    {% endfor %}
+  </section>
+{% endblock %}

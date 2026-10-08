@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block titulo %}Seja um congregado — {{ configuracao.nome_igreja }}{% endblock %}
+{% block conteudo %}
+  <h1>Seja um congregado</h1>
+  {% if not subsedes %}
+    <p>O cadastro abre quando houver uma subsede ativa.</p>
+  {% else %}
+    <form method="post">
+      {{ formulario.hidden_tag() }}
+      <div style="position:absolute;left:-10000px" aria-hidden="true">
+        {{ formulario.empresa.label }}
+        {{ formulario.empresa() }}
+      </div>
+      <p>
+        {{ formulario.nome.label }}<br>
+        {{ formulario.nome() }}
+        {% for erro in formulario.nome.errors %}<span>{{ erro }}</span>{% endfor %}
+      </p>
+      <p>
+        {{ formulario.email.label }}<br>
+        {{ formulario.email() }}
+        {% for erro in formulario.email.errors %}<span>{{ erro }}</span>{% endfor %}
+      </p>
+      <p>
+        {{ formulario.whatsapp.label }}<br>
+        {{ formulario.whatsapp() }}
+        {% for erro in formulario.whatsapp.errors %}<span>{{ erro }}</span>{% endfor %}
+      </p>
+      <p>
+        {{ formulario.subsede_id.label }}<br>
+        {{ formulario.subsede_id() }}
+        {% for erro in formulario.subsede_id.errors %}<span>{{ erro }}</span>{% endfor %}
+      </p>
+      <p>
+        {{ formulario.consentimento() }}
+        {{ formulario.consentimento.label }}
+        {% for erro in formulario.consentimento.errors %}<span>{{ erro }}</span>{% endfor %}
+      </p>
+      <button type="submit">Enviar</button>
+    </form>
+  {% endif %}
+{% endblock %}

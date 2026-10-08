@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block titulo %}Campanhas — {{ configuracao.nome_igreja }}{% endblock %}
+{% block conteudo %}
+  <h1>Campanhas</h1>
+  {% for campanha in campanhas %}
+    <article>
+      <h2><a href="{{ url_for('publico.campanha', campanha_id=campanha.id) }}">{{ campanha.titulo }}</a></h2>
+      <p>{{ campanha.descricao }}</p>
+      {% if campanha.imagem_url %}<img src="{{ campanha.imagem_url }}" alt="">{% endif %}
+      <p>{{ formatar_quantidade(campanha.arrecadado, campanha.unidade) }} de {{ formatar_quantidade(campanha.meta, campanha.unidade) }}</p>
+      <progress value="{{ percentual_meta(campanha.arrecadado, campanha.meta) }}" max="100"></progress>
+    </article>
+  {% else %}
+    <p>Nenhuma campanha ativa.</p>
+  {% endfor %}
+{% endblock %}

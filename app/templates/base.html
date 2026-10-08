@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}{{ configuracao.nome_igreja }}{% endblock %}</title>
+</head>
+<body>
+  <header>
+    <p><a href="{{ url_for('publico.inicio') }}">{{ configuracao.nome_igreja }}</a></p>
+    {% if configuracao.slogan %}<p>{{ configuracao.slogan }}</p>{% endif %}
+    <nav>
+      <a href="{{ url_for('publico.subsedes') }}">Subsedes</a>
+      <a href="{{ url_for('publico.campanhas') }}">Campanhas</a>
+      <a href="{{ url_for('publico.calendario') }}">Calendário</a>
+      <a href="{{ url_for('publico.biblia') }}">Bíblia online</a>
+      <a href="{{ url_for('publico.congregado') }}">Seja um congregado</a>
+    </nav>
+    {% if configuracao.instagram_url %}
+      <p><a href="{{ configuracao.instagram_url }}">Instagram {{ configuracao.instagram_usuario }}</a></p>
+    {% endif %}
+  </header>
+  {% with mensagens = get_flashed_messages() %}
+    {% for mensagem in mensagens %}
+      <p role="status">{{ mensagem }}</p>
+    {% endfor %}
+  {% endwith %}
+  <main>
+    {% block conteudo %}{% endblock %}
+  </main>
+</body>
+</html>

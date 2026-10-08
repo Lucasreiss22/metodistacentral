@@ -3,9 +3,12 @@
 Não acessam a rede nem leem o .env. Os testes cobrem este módulo.
 """
 
+import re
 from datetime import datetime, timezone
+from decimal import Decimal, ROUND_HALF_UP
 from secrets import token_urlsafe
-from urllib.parse import quote, unquote, urlsplit, urlunsplit
+from urllib.parse import parse_qs, quote, unquote, urlsplit, urlunsplit
+from zoneinfo import ZoneInfo
 
 # Marcadores que o painel do Supabase deixa na URI de exemplo.
 _MARCADORES_DE_SENHA = (
@@ -178,3 +181,97 @@ def mensagem_sem_senha(texto: str | None, *urls: str) -> str:
             if len(variante) >= 4:
                 limpo = limpo.replace(variante, "***")
     return limpo
+
+
+def primeiro_nome(nome: str | None) -> str:
+    """Primeira palavra do nome, para a saudação da mensagem."""
+    partes = (nome or "").strip().split()
+    return partes[0] if partes else ""
+
+
+def formatar_numero_br(valor, casas: int = 2) -> str:
+    """Número no formato brasileiro: 1234.56 vira 1.234,56."""
+    quantizado = Decimal(str(valor if valor is not None else 0)).quantize(
+        Decimal("1").scaleb(-casas),
+        rounding=ROUND_HALF_UP,
+    )
+    sinal = "-" if quantizado < 0 else ""
+    texto = f"{abs(quantizado):.{casas}f}"
+    inteiro, _, fracao = texto.partition(".")
+    grupos: list[str] = []
+    while inteiro:
+        grupos.append(inteiro[-3:])
+        inteiro = inteiro[:-3]
+    inteiro_fmt = ".".join(reversed(grupos))
+    if casas == 0:
+        return sinal + inteiro_fmt
+    return f"{sinal}{inteiro_fmt},{fracao}"
+
+
+def formatar_quantidade(valor, unidade: str | None) -> str:
+    """Meta ou valor arrecadado em reais ou em unidades, como '200 cestas'."""
+    unidade_limpa = (unidade or "").strip()
+    if unidade_limpa in {"R$", "BRL"}:
+        return f"R$ {formatar_numero_br(valor, 2)}"
+    numero = Decimal(str(valor if valor is not None else 0))
+    casas = 0 if numero == numero.to_integral_value() else 2
+    texto = formatar_numero_br(numero, casas)
+    if not unidade_limpa:
+        return texto
+    return f"{texto} {unidade_limpa}"
+
+
+def percentual_meta(arrecadado, meta) -> int:
+    """Percentual de 0 a 100. Meta vazia ou zero não divide."""
+    total = Decimal(str(meta if meta is not None else 0))
+    if total <= 0:
+        return 0
+    feito = Decimal(str(arrecadado if arrecadado is not None else 0))
+    valor = (feito / total) * 100
+    if valor < 0:
+        return 0
+    if valor > 100:
+        return 100
+    return int(valor.to_integral_value(rounding=ROUND_HALF_UP))
+
+
+def formatar_data_hora_br(momento: datetime | None, dia_inteiro: bool = False) -> str:
+    """Data e hora no fuso de Brasília."""
+    if momento is None:
+        return ""
+    if momento.tzinfo is None:
+        momento = momento.replace(tzinfo=timezone.utc)
+    local = momento.astimezone(ZoneInfo("America/Sao_Paulo"))
+    if dia_inteiro:
+        return local.strftime("%d/%m/%Y")
+    return local.strftime("%d/%m/%Y %H:%M")
+
+
+def id_do_youtube(url: str | None) -> str:
+    """Código do vídeo a partir de um link do YouTube."""
+    if not url:
+        return ""
+    try:
+        partes = urlsplit(url.strip())
+    except ValueError:
+        return ""
+    host = (partes.hostname or "").lower().removeprefix("www.")
+    if host == "youtu.be":
+        return partes.path.strip("/").split("/")[0]
+    if host == "youtube.com":
+        if partes.path.startswith("/embed/"):
+            pedacos = [p for p in partes.path.split("/") if p]
+            return pedacos[1] if len(pedacos) > 1 else ""
+        if partes.path.startswith("/shorts/"):
+            pedacos = [p for p in partes.path.split("/") if p]
+            return pedacos[1] if len(pedacos) > 1 else ""
+        return (parse_qs(partes.query).get("v") or [""])[0]
+    return ""
+
+
+def url_embed_youtube(url: str | None) -> str:
+    """Link incorporável. Vazio se o endereço não for do YouTube."""
+    ident = id_do_youtube(url)
+    if not ident or not re.fullmatch(r"[\w-]{6,}", ident):
+        return ""
+    return f"https://www.youtube.com/embed/{ident}"
