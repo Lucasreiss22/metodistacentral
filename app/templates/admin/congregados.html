@@ -1,0 +1,47 @@
+{% extends "admin/base.html" %}
+{% block titulo %}Congregados{% endblock %}
+{% block conteudo %}
+  {% set campo = "mt-1 w-full rounded-2xl border border-stone-300 px-4 py-3" %}
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <h1 class="font-serif text-4xl">Congregados</h1>
+    <a class="btn-acao bg-vinho text-white" href="{{ url_for('admin.congregados_csv') }}">Baixar CSV</a>
+  </div>
+  <div class="mt-6 grid gap-8 lg:grid-cols-[1fr_1fr]">
+    <section class="overflow-x-auto rounded-3xl bg-white shadow">
+      <table class="w-full text-left text-sm">
+        <thead class="border-b border-stone-200">
+          <tr><th class="p-3">Nome</th><th class="p-3">E-mail</th><th class="p-3">Notícias</th></tr>
+        </thead>
+        <tbody>
+          {% for atual in itens %}
+            <tr class="border-b border-stone-100">
+              <td class="p-3"><a class="text-vinho" href="{{ url_for('admin.congregado', item_id=atual.id) }}">{{ atual.nome }}</a></td>
+              <td class="p-3">{{ atual.email }}</td>
+              <td class="p-3">{{ "sim" if atual.recebe_noticias else "não" }}</td>
+            </tr>
+          {% else %}
+            <tr><td class="p-3 text-stone-600" colspan="3">Nenhum congregado.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    <form class="rounded-[1.5rem] bg-white p-6 shadow" method="post" action="{{ url_for('admin.congregado', item_id=item.id) if item else url_for('admin.congregados') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <h2 class="font-serif text-2xl">{{ "Editar" if item else "Novo congregado" }}</h2>
+      <label class="mt-4 block text-sm">Nome<input class="{{ campo }}" name="nome" value="{{ request.form.get('nome', item.nome if item else '') }}" required></label>
+      <label class="mt-4 block text-sm">E-mail<input class="{{ campo }}" name="email" type="email" value="{{ request.form.get('email', item.email if item else '') }}" required></label>
+      <label class="mt-4 block text-sm">WhatsApp<input class="{{ campo }}" name="whatsapp" value="{{ request.form.get('whatsapp', item.whatsapp if item else '') }}" required></label>
+      <label class="mt-4 block text-sm">Subsede
+        <select class="{{ campo }}" name="subsede_id">
+          <option value="">—</option>
+          {% for subsede in subsedes %}
+            <option value="{{ subsede.id }}" {% if request.form.get('subsede_id', item.subsede_id if item else '')|string == subsede.id|string %}selected{% endif %}>{{ subsede.nome }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      {% set noticias = ('recebe_noticias' in request.form) if request.method == 'POST' else (item.recebe_noticias if item else true) %}
+      <label class="mt-4 flex items-center gap-2 text-sm"><input name="recebe_noticias" type="checkbox" {% if noticias %}checked{% endif %}> Recebe notícias</label>
+      <button class="btn-acao mt-6 bg-vinho text-white" type="submit">Salvar</button>
+    </form>
+  </div>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% macro arquivo(nome, valor) %}
+  <label class="mt-4 block text-sm">Arquivo (JPG, PNG, GIF, WebP, APNG, MP4 ou WebM)
+    <input class="mt-1 block w-full text-sm" name="arquivo" type="file" accept=".jpg,.jpeg,.png,.gif,.webp,.apng,.mp4,.webm,image/gif,image/webp,video/mp4,video/webm">
+  </label>
+  <label class="mt-4 block text-sm">Ou cole um endereço
+    <input class="mt-1 w-full rounded-2xl border border-stone-300 px-4 py-3" name="{{ nome }}" value="{{ valor }}">
+  </label>
+  <p class="mt-2 text-xs text-stone-500">GIF, WebP animado e vídeo curto continuam em movimento no site.</p>
+{% endmacro %}

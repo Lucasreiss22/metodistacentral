@@ -1,0 +1,59 @@
+{% extends "admin/base.html" %}
+{% from "admin/_midia.html" import arquivo %}
+{% block titulo %}Campanhas{% endblock %}
+{% block conteudo %}
+  {% set campo = "mt-1 w-full rounded-2xl border border-stone-300 px-4 py-3" %}
+  <div class="grid gap-8 lg:grid-cols-[1fr_1.1fr]">
+    <section>
+      <h1 class="font-serif text-4xl">Campanhas</h1>
+      {% for atual in itens %}
+        <article class="mt-4 rounded-3xl bg-white p-4 shadow">
+          <h2 class="font-serif text-xl">{{ atual.titulo }}</h2>
+          <p class="text-sm text-stone-600">{{ atual.status }}</p>
+          <div class="mt-3 flex gap-2">
+            <a class="btn-acao border border-stone-300 px-3 py-2 text-sm" href="{{ url_for('admin.campanhas', item_id=atual.id) }}">Editar</a>
+            <form method="post" action="{{ url_for('admin.excluir_campanha', item_id=atual.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn-acao border border-vinho px-3 py-2 text-sm text-vinho" type="submit">Excluir</button>
+            </form>
+          </div>
+        </article>
+      {% else %}
+        <p class="mt-4 text-stone-600">Nenhuma campanha.</p>
+      {% endfor %}
+    </section>
+    <form class="rounded-[1.5rem] bg-white p-6 shadow" method="post" enctype="multipart/form-data" action="{{ url_for('admin.campanhas', item_id=item.id) if item else url_for('admin.campanhas') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <h2 class="font-serif text-2xl">{{ "Editar" if item else "Nova campanha" }}</h2>
+      <label class="mt-4 block text-sm">Título<input class="{{ campo }}" name="titulo" value="{{ request.form.get('titulo', item.titulo if item else '') }}" required></label>
+      <label class="mt-4 block text-sm">Descrição<textarea class="{{ campo }}" name="descricao" rows="4">{{ request.form.get('descricao', item.descricao if item else '') }}</textarea></label>
+      <div class="mt-4 grid gap-3 sm:grid-cols-3">
+        <label class="text-sm">Meta<input class="{{ campo }}" name="meta" value="{{ request.form.get('meta', item.meta if item else '0') }}"></label>
+        <label class="text-sm">Arrecadado<input class="{{ campo }}" name="arrecadado" value="{{ request.form.get('arrecadado', item.arrecadado if item else '0') }}"></label>
+        <label class="text-sm">Unidade<input class="{{ campo }}" name="unidade" value="{{ request.form.get('unidade', item.unidade if item else 'R$') }}"></label>
+      </div>
+      <p class="mt-2 text-xs text-stone-500">Use R$ para dinheiro ou, por exemplo, cestas para unidades. Aceita 200 ou 1.234,56.</p>
+      <label class="mt-4 block text-sm">Status
+        <select class="{{ campo }}" name="status">
+          {% for status in ["ativa", "encerrada"] %}
+            <option value="{{ status }}" {% if request.form.get('status', item.status if item else 'ativa') == status %}selected{% endif %}>{{ status }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <div class="mt-4 grid gap-3 sm:grid-cols-2">
+        <label class="text-sm">Início<input class="{{ campo }}" name="data_inicio" type="date" value="{{ request.form.get('data_inicio', item.data_inicio.isoformat() if item and item.data_inicio else '') }}"></label>
+        <label class="text-sm">Fim<input class="{{ campo }}" name="data_fim" type="date" value="{{ request.form.get('data_fim', item.data_fim.isoformat() if item and item.data_fim else '') }}"></label>
+      </div>
+      <label class="mt-4 block text-sm">Subsede
+        <select class="{{ campo }}" name="subsede_id">
+          <option value="">—</option>
+          {% for subsede in subsedes %}
+            <option value="{{ subsede.id }}" {% if request.form.get('subsede_id', item.subsede_id if item else '')|string == subsede.id|string %}selected{% endif %}>{{ subsede.nome }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      {{ arquivo("imagem_url", request.form.get("imagem_url", item.imagem_url if item else "")) }}
+      <button class="btn-acao mt-6 bg-vinho text-white" type="submit">Salvar</button>
+    </form>
+  </div>
+{% endblock %}

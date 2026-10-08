@@ -1,0 +1,48 @@
+{% extends "admin/base.html" %}
+{% from "admin/_midia.html" import arquivo %}
+{% block titulo %}Informativos{% endblock %}
+{% block conteudo %}
+  {% set campo = "mt-1 w-full rounded-2xl border border-stone-300 px-4 py-3" %}
+  <div class="grid gap-8 lg:grid-cols-[1fr_1.1fr]">
+    <section>
+      <h1 class="font-serif text-4xl">Informativos</h1>
+      <p class="mt-2 text-sm text-stone-600">Banner, foto, vídeo ou aviso da página inicial. GIF e foto animada entram aqui.</p>
+      {% for atual in itens %}
+        <article class="mt-4 rounded-3xl bg-white p-4 shadow">
+          <h2 class="font-serif text-xl">{{ atual.titulo }}</h2>
+          <p class="text-sm text-stone-600">{{ atual.tipo }}{% if not atual.ativo %} · oculto{% endif %}</p>
+          <div class="mt-3 flex gap-2">
+            <a class="btn-acao border border-stone-300 px-3 py-2 text-sm" href="{{ url_for('admin.informativos', item_id=atual.id) }}">Editar</a>
+            <form method="post" action="{{ url_for('admin.excluir_informativo', item_id=atual.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn-acao border border-vinho px-3 py-2 text-sm text-vinho" type="submit">Excluir</button>
+            </form>
+          </div>
+        </article>
+      {% else %}
+        <p class="mt-4 text-stone-600">Nenhum informativo.</p>
+      {% endfor %}
+    </section>
+    <form class="rounded-[1.5rem] bg-white p-6 shadow" method="post" enctype="multipart/form-data" action="{{ url_for('admin.informativos', item_id=item.id) if item else url_for('admin.informativos') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <h2 class="font-serif text-2xl">{{ "Editar" if item else "Novo informativo" }}</h2>
+      <label class="mt-4 block text-sm">Título<input class="{{ campo }}" name="titulo" value="{{ request.form.get('titulo', item.titulo if item else '') }}" required></label>
+      <label class="mt-4 block text-sm">Tipo
+        <select class="{{ campo }}" name="tipo">
+          {% for tipo in ["banner", "foto", "video", "aviso"] %}
+            <option value="{{ tipo }}" {% if request.form.get('tipo', item.tipo if item else 'banner') == tipo %}selected{% endif %}>{{ tipo }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="mt-4 block text-sm">Texto<textarea class="{{ campo }}" name="texto" rows="4">{{ request.form.get('texto', item.texto if item else '') }}</textarea></label>
+      <label class="mt-4 block text-sm">Link<input class="{{ campo }}" name="link_url" value="{{ request.form.get('link_url', item.link_url if item else '') }}"></label>
+      {{ arquivo("conteudo_url", request.form.get("conteudo_url", item.conteudo_url if item else "")) }}
+      <label class="mt-4 block text-sm">Ordem<input class="{{ campo }}" name="ordem" type="number" value="{{ request.form.get('ordem', item.ordem if item else 0) }}"></label>
+      {% set destaque = ('destaque' in request.form) if request.method == 'POST' else (item.destaque if item else false) %}
+      {% set ativo = ('ativo' in request.form) if request.method == 'POST' else (item.ativo if item else true) %}
+      <label class="mt-4 flex items-center gap-2 text-sm"><input name="destaque" type="checkbox" {% if destaque %}checked{% endif %}> Destaque</label>
+      <label class="mt-2 flex items-center gap-2 text-sm"><input name="ativo" type="checkbox" {% if ativo %}checked{% endif %}> Visível no site</label>
+      <button class="btn-acao mt-6 bg-vinho text-white" type="submit">Salvar</button>
+    </form>
+  </div>
+{% endblock %}

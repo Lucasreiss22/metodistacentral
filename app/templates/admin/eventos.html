@@ -1,0 +1,54 @@
+{% extends "admin/base.html" %}
+{% from "admin/_midia.html" import arquivo %}
+{% block titulo %}Eventos{% endblock %}
+{% block conteudo %}
+  {% set campo = "mt-1 w-full rounded-2xl border border-stone-300 px-4 py-3" %}
+  <div class="grid gap-8 lg:grid-cols-[1fr_1.1fr]">
+    <section>
+      <h1 class="font-serif text-4xl">Eventos</h1>
+      {% for atual in itens %}
+        <article class="mt-4 rounded-3xl bg-white p-4 shadow">
+          <h2 class="font-serif text-xl">{{ atual.titulo }}</h2>
+          <p class="text-sm text-stone-600">{{ formatar_data_hora_br(atual.data_evento, atual.dia_inteiro) }} · {{ atual.status }}</p>
+          <div class="mt-3 flex gap-2">
+            <a class="btn-acao border border-stone-300 px-3 py-2 text-sm" href="{{ url_for('admin.eventos', item_id=atual.id) }}">Editar</a>
+            <form method="post" action="{{ url_for('admin.excluir_evento', item_id=atual.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn-acao border border-vinho px-3 py-2 text-sm text-vinho" type="submit">Excluir</button>
+            </form>
+          </div>
+        </article>
+      {% else %}
+        <p class="mt-4 text-stone-600">Nenhum evento.</p>
+      {% endfor %}
+    </section>
+    <form class="rounded-[1.5rem] bg-white p-6 shadow" method="post" enctype="multipart/form-data" action="{{ url_for('admin.eventos', item_id=item.id) if item else url_for('admin.eventos') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <h2 class="font-serif text-2xl">{{ "Editar" if item else "Novo evento" }}</h2>
+      <label class="mt-4 block text-sm">Título<input class="{{ campo }}" name="titulo" value="{{ request.form.get('titulo', item.titulo if item else '') }}" required></label>
+      <label class="mt-4 block text-sm">Descrição<textarea class="{{ campo }}" name="descricao" rows="3">{{ request.form.get('descricao', item.descricao if item else '') }}</textarea></label>
+      <label class="mt-4 block text-sm">Início<input class="{{ campo }}" name="data_evento" type="datetime-local" value="{{ request.form.get('data_evento', valor_data_hora(item.data_evento) if item else '') }}" required></label>
+      <label class="mt-4 block text-sm">Fim<input class="{{ campo }}" name="data_fim" type="datetime-local" value="{{ request.form.get('data_fim', valor_data_hora(item.data_fim) if item and item.data_fim else '') }}"></label>
+      <label class="mt-4 block text-sm">Local<input class="{{ campo }}" name="local" value="{{ request.form.get('local', item.local if item else '') }}"></label>
+      <label class="mt-4 block text-sm">Subsede
+        <select class="{{ campo }}" name="subsede_id">
+          <option value="">—</option>
+          {% for subsede in subsedes %}
+            <option value="{{ subsede.id }}" {% if request.form.get('subsede_id', item.subsede_id if item else '')|string == subsede.id|string %}selected{% endif %}>{{ subsede.nome }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="mt-4 block text-sm">Status
+        <select class="{{ campo }}" name="status">
+          {% for status in ["ativo", "encerrado", "cancelado"] %}
+            <option value="{{ status }}" {% if request.form.get('status', item.status if item else 'ativo') == status %}selected{% endif %}>{{ status }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      {{ arquivo("imagem_url", request.form.get("imagem_url", item.imagem_url if item else "")) }}
+      {% set inteiro = ('dia_inteiro' in request.form) if request.method == 'POST' else (item.dia_inteiro if item else false) %}
+      <label class="mt-4 flex items-center gap-2 text-sm"><input name="dia_inteiro" type="checkbox" {% if inteiro %}checked{% endif %}> Dia inteiro</label>
+      <button class="btn-acao mt-6 bg-vinho text-white" type="submit">Salvar</button>
+    </form>
+  </div>
+{% endblock %}

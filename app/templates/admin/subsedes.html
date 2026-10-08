@@ -1,0 +1,52 @@
+{% extends "admin/base.html" %}
+{% from "admin/_midia.html" import arquivo %}
+{% block titulo %}Subsedes{% endblock %}
+{% block conteudo %}
+  {% set campo = "mt-1 w-full rounded-2xl border border-stone-300 px-4 py-3" %}
+  <div class="grid gap-8 lg:grid-cols-[1fr_1.1fr]">
+    <section>
+      <h1 class="font-serif text-4xl">Subsedes</h1>
+      {% for atual in itens %}
+        <article class="mt-4 rounded-3xl bg-white p-4 shadow">
+          <h2 class="font-serif text-xl">{{ atual.nome }}{% if atual.eh_sede %} · sede{% endif %}</h2>
+          <p class="text-sm text-stone-600">{{ atual.cidade }}/{{ atual.uf }}{% if not atual.ativa %} · inativa{% endif %}</p>
+          <div class="mt-3 flex gap-2">
+            <a class="btn-acao border border-stone-300 px-3 py-2 text-sm" href="{{ url_for('admin.subsedes', item_id=atual.id) }}">Editar</a>
+            <form method="post" action="{{ url_for('admin.excluir_subsede', item_id=atual.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn-acao border border-vinho px-3 py-2 text-sm text-vinho" type="submit">Excluir</button>
+            </form>
+          </div>
+        </article>
+      {% else %}
+        <p class="mt-4 text-stone-600">Nenhuma subsede.</p>
+      {% endfor %}
+    </section>
+    <form class="rounded-[1.5rem] bg-white p-6 shadow" method="post" enctype="multipart/form-data" action="{{ url_for('admin.subsedes', item_id=item.id) if item else url_for('admin.subsedes') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <h2 class="font-serif text-2xl">{{ "Editar" if item else "Nova subsede" }}</h2>
+      <label class="mt-4 block text-sm">Nome<input class="{{ campo }}" name="nome" value="{{ request.form.get('nome', item.nome if item else '') }}" required></label>
+      <label class="mt-4 block text-sm">Endereço<input class="{{ campo }}" name="endereco" value="{{ request.form.get('endereco', item.endereco if item else '') }}"></label>
+      <div class="mt-4 grid gap-3 sm:grid-cols-2">
+        <label class="text-sm">Bairro<input class="{{ campo }}" name="bairro" value="{{ request.form.get('bairro', item.bairro if item else '') }}"></label>
+        <label class="text-sm">CEP<input class="{{ campo }}" name="cep" value="{{ request.form.get('cep', item.cep if item else '') }}"></label>
+        <label class="text-sm">Cidade<input class="{{ campo }}" name="cidade" value="{{ request.form.get('cidade', item.cidade if item else '') }}" required></label>
+        <label class="text-sm">UF<input class="{{ campo }}" name="uf" maxlength="2" value="{{ request.form.get('uf', item.uf if item else 'RJ') }}" required></label>
+      </div>
+      <label class="mt-4 block text-sm">Telefone<input class="{{ campo }}" name="telefone" value="{{ request.form.get('telefone', item.telefone if item else '') }}"></label>
+      <label class="mt-4 block text-sm">WhatsApp<input class="{{ campo }}" name="whatsapp" value="{{ request.form.get('whatsapp', item.whatsapp if item else '') }}"></label>
+      <label class="mt-4 block text-sm">E-mail<input class="{{ campo }}" name="email" value="{{ request.form.get('email', item.email if item else '') }}"></label>
+      <label class="mt-4 block text-sm">Instagram<input class="{{ campo }}" name="instagram_url" value="{{ request.form.get('instagram_url', item.instagram_url if item else '') }}"></label>
+      <label class="mt-4 block text-sm">Pastor responsável<input class="{{ campo }}" name="pastor_responsavel" value="{{ request.form.get('pastor_responsavel', item.pastor_responsavel if item else '') }}"></label>
+      <label class="mt-4 block text-sm">Horários de culto<textarea class="{{ campo }}" name="horarios_culto" rows="3">{{ request.form.get('horarios_culto', item.horarios_culto if item else '') }}</textarea></label>
+      <label class="mt-4 block text-sm">Link do mapa<input class="{{ campo }}" name="mapa_url" value="{{ request.form.get('mapa_url', item.mapa_url if item else '') }}"></label>
+      {{ arquivo("imagem_url", request.form.get("imagem_url", item.imagem_url if item else "")) }}
+      <label class="mt-4 block text-sm">Ordem<input class="{{ campo }}" name="ordem" type="number" value="{{ request.form.get('ordem', item.ordem if item else 0) }}"></label>
+      {% set sede = ('eh_sede' in request.form) if request.method == 'POST' else (item.eh_sede if item else false) %}
+      {% set ligada = ('ativa' in request.form) if request.method == 'POST' else (item.ativa if item else true) %}
+      <label class="mt-4 flex items-center gap-2 text-sm"><input name="eh_sede" type="checkbox" {% if sede %}checked{% endif %}> Esta é a sede</label>
+      <label class="mt-2 flex items-center gap-2 text-sm"><input name="ativa" type="checkbox" {% if ligada %}checked{% endif %}> Ativa no site</label>
+      <button class="btn-acao mt-6 bg-vinho text-white" type="submit">Salvar</button>
+    </form>
+  </div>
+{% endblock %}

@@ -74,6 +74,7 @@ class Config:
     NOME_REMETENTE = ler_variavel("NOME_REMETENTE")
     URL_PUBLICA = ler_variavel("URL_PUBLICA").rstrip("/")
 
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024
     PERMANENT_SESSION_LIFETIME = timedelta(hours=8)
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"

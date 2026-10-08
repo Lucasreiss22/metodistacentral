@@ -1,0 +1,21 @@
+{% extends "admin/base.html" %}
+{% block titulo %}Configurações{% endblock %}
+{% block conteudo %}
+  {% set campo = "mt-1 w-full rounded-2xl border border-stone-300 px-4 py-3" %}
+  {% set atual = item %}
+  <h1 class="font-serif text-4xl">Configurações do site</h1>
+  <form class="mt-6 max-w-2xl rounded-[1.5rem] bg-white p-6 shadow" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="block text-sm">Nome da igreja<input class="{{ campo }}" name="nome_igreja" value="{{ request.form.get('nome_igreja', atual.nome_igreja if atual else '') }}" required></label>
+    <label class="mt-4 block text-sm">Slogan<input class="{{ campo }}" name="slogan" value="{{ request.form.get('slogan', atual.slogan if atual else '') }}"></label>
+    <label class="mt-4 block text-sm">Endereço<input class="{{ campo }}" name="endereco" value="{{ request.form.get('endereco', atual.endereco if atual else '') }}"></label>
+    <label class="mt-4 block text-sm">Sobre<textarea class="{{ campo }}" name="sobre" rows="4">{{ request.form.get('sobre', atual.sobre if atual else '') }}</textarea></label>
+    <label class="mt-4 block text-sm">Instagram (endereço)<input class="{{ campo }}" name="instagram_url" value="{{ request.form.get('instagram_url', atual.instagram_url if atual else '') }}"></label>
+    <label class="mt-4 block text-sm">Instagram (usuário)<input class="{{ campo }}" name="instagram_usuario" value="{{ request.form.get('instagram_usuario', atual.instagram_usuario if atual else '') }}"></label>
+    <label class="mt-4 block text-sm">YouTube<input class="{{ campo }}" name="youtube_url" value="{{ request.form.get('youtube_url', atual.youtube_url if atual else '') }}"></label>
+    <label class="mt-4 block text-sm">Facebook<input class="{{ campo }}" name="facebook_url" value="{{ request.form.get('facebook_url', atual.facebook_url if atual else '') }}"></label>
+    <label class="mt-4 block text-sm">WhatsApp<input class="{{ campo }}" name="whatsapp" value="{{ request.form.get('whatsapp', atual.whatsapp if atual else '') }}"></label>
+    <label class="mt-4 block text-sm">E-mail de contato<input class="{{ campo }}" name="email_contato" value="{{ request.form.get('email_contato', atual.email_contato if atual else '') }}"></label>
+    <button class="btn-acao mt-6 bg-vinho text-white" type="submit">Salvar</button>
+  </form>
+{% endblock %}

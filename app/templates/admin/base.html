@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}Painel{% endblock %} — Igreja Metodista Central</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { creme: "#f6f0e6", tinta: "#1f1a17", vinho: "#8f1d3a", ouro: "#b8893d" },
+          fontFamily: { serif: ["Fraunces", "Georgia", "serif"], sans: ["Outfit", "sans-serif"] },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}">
+</head>
+<body class="bg-creme font-sans text-tinta">
+  {% if request.endpoint != "admin.entrar" %}
+    <header class="border-b border-stone-200 bg-white">
+      <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4">
+        <a class="font-serif text-xl text-vinho" href="{{ url_for('admin.painel') }}">Painel da igreja</a>
+        <form method="post" action="{{ url_for('admin.sair') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn-acao border border-stone-300 px-4 py-2 text-sm" type="submit">Sair</button>
+        </form>
+      </div>
+      <nav class="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 pb-4 text-sm">
+        {% for endereco, rotulo in [
+          ("admin.subsedes", "Subsedes"),
+          ("admin.informativos", "Informativos"),
+          ("admin.eventos", "Eventos"),
+          ("admin.campanhas", "Campanhas"),
+          ("admin.feriados", "Feriados"),
+          ("admin.congregados", "Congregados"),
+          ("admin.comunicados", "Comunicados"),
+          ("admin.configuracoes", "Configurações"),
+        ] %}
+          <a class="shrink-0 rounded-full px-3 py-2 {% if request.endpoint == endereco %}bg-vinho text-white{% else %}bg-white{% endif %}" href="{{ url_for(endereco) }}">{{ rotulo }}</a>
+        {% endfor %}
+      </nav>
+    </header>
+  {% endif %}
+  <main class="mx-auto max-w-6xl px-4 py-8">
+    {% with mensagens = get_flashed_messages() %}
+      {% for mensagem in mensagens %}
+        <p class="mb-4 rounded-2xl bg-white px-4 py-3 shadow" role="status">{{ mensagem }}</p>
+      {% endfor %}
+    {% endwith %}
+    {% block conteudo %}{% endblock %}
+  </main>
+</body>
+</html>
