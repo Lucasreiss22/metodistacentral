@@ -1,4 +1,4 @@
-"""Páginas públicas. O visual em Tailwind entra na Parte 3."""
+"""Páginas públicas do site."""
 
 from datetime import date, datetime, timedelta, timezone
 from types import SimpleNamespace
@@ -21,6 +21,7 @@ from app.utils import (
     formatar_quantidade,
     normalizar_email,
     percentual_meta,
+    tipo_de_midia,
     url_embed_youtube,
 )
 
@@ -76,6 +77,11 @@ def _quando(momento, dia_inteiro=False):
 @bp.app_template_global("link_wa_me")
 def _whatsapp(telefone, mensagem="", nome=""):
     return link_wa_me(telefone, mensagem, nome)
+
+
+@bp.app_template_global("tipo_de_midia")
+def _tipo_midia(url):
+    return tipo_de_midia(url)
 
 
 def subsedes_ativas():

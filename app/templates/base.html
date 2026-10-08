@@ -4,29 +4,90 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block titulo %}{{ configuracao.nome_igreja }}{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            creme: "#f6f0e6",
+            tinta: "#1f1a17",
+            vinho: "#8f1d3a",
+            ouro: "#b8893d",
+          },
+          fontFamily: {
+            serif: ["Fraunces", "Georgia", "serif"],
+            sans: ["Outfit", "sans-serif"],
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}">
+  {% block cabeca %}{% endblock %}
 </head>
-<body>
-  <header>
-    <p><a href="{{ url_for('publico.inicio') }}">{{ configuracao.nome_igreja }}</a></p>
-    {% if configuracao.slogan %}<p>{{ configuracao.slogan }}</p>{% endif %}
-    <nav>
-      <a href="{{ url_for('publico.subsedes') }}">Subsedes</a>
-      <a href="{{ url_for('publico.campanhas') }}">Campanhas</a>
-      <a href="{{ url_for('publico.calendario') }}">Calendário</a>
-      <a href="{{ url_for('publico.biblia') }}">Bíblia online</a>
-      <a href="{{ url_for('publico.congregado') }}">Seja um congregado</a>
-    </nav>
-    {% if configuracao.instagram_url %}
-      <p><a href="{{ configuracao.instagram_url }}">Instagram {{ configuracao.instagram_usuario }}</a></p>
-    {% endif %}
-  </header>
-  {% with mensagens = get_flashed_messages() %}
-    {% for mensagem in mensagens %}
-      <p role="status">{{ mensagem }}</p>
-    {% endfor %}
-  {% endwith %}
-  <main>
+<body class="bg-creme font-sans text-tinta">
+  <div class="fixed inset-x-0 top-0 z-50">
+    <div class="bg-vinho text-creme">
+      <div class="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2 text-sm">
+        <p class="truncate">{{ configuracao.endereco or "Teresópolis - RJ" }}</p>
+        {% if configuracao.instagram_url %}
+          <a class="btn-acao shrink-0 bg-white px-3 py-2 text-xs text-vinho" href="{{ configuracao.instagram_url }}">
+            Instagram {{ configuracao.instagram_usuario }}
+          </a>
+        {% endif %}
+      </div>
+    </div>
+    <header class="border-b border-stone-200 bg-creme/95 backdrop-blur">
+      <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
+        <a class="font-serif text-xl leading-tight text-vinho" href="{{ url_for('publico.inicio') }}">{{ configuracao.nome_igreja }}</a>
+        <button class="btn-acao border border-stone-300 px-3 py-2 text-sm md:hidden" type="button" data-menu aria-expanded="false">Menu</button>
+        <nav class="hidden items-center gap-5 text-sm md:flex">
+          <a class="hover:text-vinho" href="{{ url_for('publico.subsedes') }}">Subsedes</a>
+          <a class="hover:text-vinho" href="{{ url_for('publico.campanhas') }}">Campanhas</a>
+          <a class="hover:text-vinho" href="{{ url_for('publico.calendario') }}">Calendário</a>
+          <a class="hover:text-vinho" href="{{ url_for('publico.biblia') }}">Bíblia online</a>
+          <a class="btn-acao bg-vinho text-white" href="{{ url_for('publico.congregado') }}">Seja um congregado</a>
+        </nav>
+      </div>
+      <nav class="hidden border-t border-stone-200 px-4 py-3 md:hidden" data-painel>
+        <div class="flex flex-col gap-3 text-sm">
+          <a href="{{ url_for('publico.subsedes') }}">Subsedes</a>
+          <a href="{{ url_for('publico.campanhas') }}">Campanhas</a>
+          <a href="{{ url_for('publico.calendario') }}">Calendário</a>
+          <a href="{{ url_for('publico.biblia') }}">Bíblia online</a>
+          <a class="btn-acao bg-vinho text-white" href="{{ url_for('publico.congregado') }}">Seja um congregado</a>
+        </div>
+      </nav>
+    </header>
+  </div>
+
+  <main class="mx-auto min-h-screen max-w-6xl px-4 pb-16 pt-36">
+    {% with mensagens = get_flashed_messages() %}
+      {% for mensagem in mensagens %}
+        <p class="surgir mb-6 rounded-2xl bg-white px-4 py-3 shadow" role="status">{{ mensagem }}</p>
+      {% endfor %}
+    {% endwith %}
     {% block conteudo %}{% endblock %}
   </main>
+
+  <footer class="border-t border-stone-200 bg-tinta text-creme">
+    <div class="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-8 text-sm md:flex-row md:items-center md:justify-between">
+      <p class="font-serif text-lg">{{ configuracao.nome_igreja }}</p>
+      <div class="flex flex-wrap gap-4">
+        {% if configuracao.instagram_url %}<a href="{{ configuracao.instagram_url }}">Instagram</a>{% endif %}
+        {% if configuracao.youtube_url %}<a href="{{ configuracao.youtube_url }}">YouTube</a>{% endif %}
+        {% if configuracao.facebook_url %}<a href="{{ configuracao.facebook_url }}">Facebook</a>{% endif %}
+        {% if configuracao.whatsapp %}
+          <a href="{{ link_wa_me(configuracao.whatsapp, 'Olá, paz.') }}">WhatsApp</a>
+        {% endif %}
+      </div>
+    </div>
+  </footer>
+  <script src="{{ url_for('static', filename='site.js') }}"></script>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

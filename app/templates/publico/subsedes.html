@@ -1,29 +1,37 @@
 {% extends "base.html" %}
+{% from "publico/_midia.html" import midia %}
 {% block titulo %}Subsedes — {{ configuracao.nome_igreja }}{% endblock %}
 {% block conteudo %}
-  <h1>Subsedes</h1>
-  {% for subsede in subsedes %}
-    <article>
-      <h2>{{ subsede.nome }}{% if subsede.eh_sede %} (sede){% endif %}</h2>
-      <p>
-        {{ subsede.endereco }}
-        {% if subsede.bairro %} — {{ subsede.bairro }}{% endif %}
-        {% if subsede.cidade %} — {{ subsede.cidade }}{% endif %}
-        {% if subsede.uf %}/{{ subsede.uf }}{% endif %}
-      </p>
-      {% if subsede.horarios_culto %}<p>{{ subsede.horarios_culto }}</p>{% endif %}
-      {% if subsede.pastor_responsavel %}<p>Pastor: {{ subsede.pastor_responsavel }}</p>{% endif %}
-      {% if subsede.whatsapp %}
-        <p><a href="{{ link_wa_me(subsede.whatsapp, 'Olá, paz.') }}">WhatsApp</a></p>
-      {% endif %}
-      {% if subsede.instagram_url %}
-        <p><a href="{{ subsede.instagram_url }}">Instagram</a></p>
-      {% endif %}
-      {% if subsede.mapa_url %}
-        <p><a href="{{ subsede.mapa_url }}">Como chegar</a></p>
-      {% endif %}
-    </article>
-  {% else %}
-    <p>Nenhuma subsede publicada.</p>
-  {% endfor %}
+  <h1 class="font-serif text-4xl">Subsedes</h1>
+  <div class="mt-6 grid gap-5">
+    {% for subsede in subsedes %}
+      <article class="cartao grid overflow-hidden rounded-[1.5rem] bg-white shadow md:grid-cols-[280px_1fr]">
+        {{ midia(subsede.imagem_url, subsede.nome, "min-h-48") }}
+        <div class="p-6">
+          <h2 class="font-serif text-3xl">{{ subsede.nome }}{% if subsede.eh_sede %} <span class="text-base text-vinho">(sede)</span>{% endif %}</h2>
+          <p class="mt-3 text-stone-600">
+            {{ subsede.endereco }}
+            {% if subsede.bairro %} — {{ subsede.bairro }}{% endif %}
+            {% if subsede.cidade %} — {{ subsede.cidade }}{% endif %}
+            {% if subsede.uf %}/{{ subsede.uf }}{% endif %}
+          </p>
+          {% if subsede.horarios_culto %}<p class="mt-3 whitespace-pre-line">{{ subsede.horarios_culto }}</p>{% endif %}
+          {% if subsede.pastor_responsavel %}<p class="mt-2">Pastor: {{ subsede.pastor_responsavel }}</p>{% endif %}
+          <div class="mt-5 flex flex-wrap gap-3">
+            {% if subsede.whatsapp %}
+              <a class="btn-acao bg-[#128C7E] text-white" href="{{ link_wa_me(subsede.whatsapp, 'Olá, paz.') }}">WhatsApp</a>
+            {% endif %}
+            {% if subsede.instagram_url %}
+              <a class="btn-acao border border-vinho text-vinho" href="{{ subsede.instagram_url }}">Instagram</a>
+            {% endif %}
+            {% if subsede.mapa_url %}
+              <a class="btn-acao bg-vinho text-white" href="{{ subsede.mapa_url }}">Como chegar</a>
+            {% endif %}
+          </div>
+        </div>
+      </article>
+    {% else %}
+      <p class="text-stone-600">Nenhuma subsede publicada.</p>
+    {% endfor %}
+  </div>
 {% endblock %}

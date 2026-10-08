@@ -1,16 +1,25 @@
 {% extends "base.html" %}
+{% from "publico/_midia.html" import midia %}
 {% block titulo %}Campanhas — {{ configuracao.nome_igreja }}{% endblock %}
 {% block conteudo %}
-  <h1>Campanhas</h1>
-  {% for campanha in campanhas %}
-    <article>
-      <h2><a href="{{ url_for('publico.campanha', campanha_id=campanha.id) }}">{{ campanha.titulo }}</a></h2>
-      <p>{{ campanha.descricao }}</p>
-      {% if campanha.imagem_url %}<img src="{{ campanha.imagem_url }}" alt="">{% endif %}
-      <p>{{ formatar_quantidade(campanha.arrecadado, campanha.unidade) }} de {{ formatar_quantidade(campanha.meta, campanha.unidade) }}</p>
-      <progress value="{{ percentual_meta(campanha.arrecadado, campanha.meta) }}" max="100"></progress>
-    </article>
-  {% else %}
-    <p>Nenhuma campanha ativa.</p>
-  {% endfor %}
+  <h1 class="font-serif text-4xl">Campanhas</h1>
+  <div class="mt-6 grid gap-5 md:grid-cols-2">
+    {% for campanha in campanhas %}
+      <article class="cartao overflow-hidden rounded-[1.5rem] bg-white shadow">
+        {{ midia(campanha.imagem_url, campanha.titulo, "aspect-video") }}
+        <div class="p-6">
+          <h2 class="font-serif text-2xl">
+            <a href="{{ url_for('publico.campanha', campanha_id=campanha.id) }}">{{ campanha.titulo }}</a>
+          </h2>
+          <p class="mt-2 text-stone-600">{{ campanha.descricao }}</p>
+          <p class="mt-4 text-sm">{{ formatar_quantidade(campanha.arrecadado, campanha.unidade) }} de {{ formatar_quantidade(campanha.meta, campanha.unidade) }}</p>
+          <div class="mt-2 h-2 overflow-hidden rounded-full bg-stone-200">
+            <div class="h-full bg-ouro" style="width: {{ percentual_meta(campanha.arrecadado, campanha.meta) }}%"></div>
+          </div>
+        </div>
+      </article>
+    {% else %}
+      <p class="text-stone-600">Nenhuma campanha ativa.</p>
+    {% endfor %}
+  </div>
 {% endblock %}

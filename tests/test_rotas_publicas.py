@@ -61,8 +61,11 @@ def _sede():
 def test_pagina_inicial_responde(cliente):
     resposta = cliente.get("/")
     assert resposta.status_code == 200
-    assert "Seja um congregado" in resposta.get_data(as_text=True)
-    assert "Bíblia online" in resposta.get_data(as_text=True)
+    texto = resposta.get_data(as_text=True)
+    assert "Seja um congregado" in texto
+    assert "Bíblia online" in texto
+    assert "btn-acao" in texto
+    assert "cdn.tailwindcss.com" in texto
 
 
 def test_cadastro_grava_e_chama_o_brevo(cliente, app, enviados):

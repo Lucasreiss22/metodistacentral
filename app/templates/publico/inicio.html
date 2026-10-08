@@ -1,107 +1,160 @@
 {% extends "base.html" %}
+{% from "publico/_midia.html" import midia %}
 {% block conteudo %}
-  <p>
-    {% if configuracao.instagram_url %}
-      <a href="{{ configuracao.instagram_url }}">Instagram oficial</a>
+  <section class="surgir overflow-hidden rounded-[2rem] bg-vinho text-creme">
+    <div class="grid gap-8 px-6 py-12 md:grid-cols-2 md:px-10 md:py-16">
+      <div>
+        <p class="text-sm uppercase tracking-[0.2em] text-ouro">Teresópolis · RJ</p>
+        <h1 class="mt-3 font-serif text-4xl leading-tight md:text-6xl">{{ configuracao.nome_igreja }}</h1>
+        {% if configuracao.slogan %}<p class="mt-4 text-lg text-creme/90">{{ configuracao.slogan }}</p>{% endif %}
+        <div class="mt-8 flex flex-col gap-3 sm:flex-row">
+          <a class="btn-acao bg-white text-vinho" href="{{ url_for('publico.congregado') }}">Seja um congregado</a>
+          <a class="btn-acao border border-white/40 text-white" href="{{ url_for('publico.biblia') }}">Bíblia online</a>
+        </div>
+      </div>
+      <div class="flex flex-col justify-end gap-4">
+        {% if configuracao.instagram_url %}
+          <a class="btn-acao self-start bg-ouro text-tinta" href="{{ configuracao.instagram_url }}">Instagram oficial</a>
+        {% endif %}
+        {% if configuracao.sobre %}<p class="max-w-md text-creme/90">{{ configuracao.sobre }}</p>{% endif %}
+      </div>
+    </div>
+  </section>
+
+  <section class="mt-12">
+    <h2 class="font-serif text-3xl">Banners</h2>
+    {% set banners = informativos | selectattr("tipo", "equalto", "banner") | list %}
+    {% if banners %}
+      <div class="relative mt-4" data-carrossel>
+        {% for item in banners %}
+          <article class="cartao overflow-hidden rounded-[1.5rem] bg-white shadow {% if not loop.first %}hidden{% endif %}" data-slide>
+            {{ midia(item.conteudo_url, item.titulo, "aspect-[16/9]") }}
+            <div class="p-6">
+              <h3 class="font-serif text-2xl">{{ item.titulo }}</h3>
+              {% if item.texto %}<p class="mt-2 text-stone-600">{{ item.texto }}</p>{% endif %}
+              {% if item.link_url %}
+                <a class="btn-acao mt-4 bg-vinho text-white" href="{{ item.link_url }}">Saiba mais</a>
+              {% endif %}
+            </div>
+          </article>
+        {% endfor %}
+        {% if banners | length > 1 %}
+          <div class="mt-4 flex items-center justify-between">
+            <div class="flex gap-2">
+              {% for item in banners %}
+                <button class="h-2.5 w-2.5 rounded-full {% if loop.first %}bg-vinho{% else %}bg-stone-300{% endif %}" type="button" data-ponto aria-label="Banner {{ loop.index }}"></button>
+              {% endfor %}
+            </div>
+            <div class="flex gap-2">
+              <button class="btn-acao border border-stone-300 px-4 py-2" type="button" data-anterior>Anterior</button>
+              <button class="btn-acao bg-vinho px-4 py-2 text-white" type="button" data-proximo>Próximo</button>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    {% else %}
+      <p class="mt-3 text-stone-600">Nenhum banner publicado.</p>
     {% endif %}
-    <a href="{{ url_for('publico.congregado') }}">Seja um congregado</a>
-    <a href="{{ url_for('publico.biblia') }}">Bíblia online</a>
-  </p>
-
-  {% if configuracao.sobre %}<section><h1>Sobre</h1><p>{{ configuracao.sobre }}</p></section>{% endif %}
-
-  <section>
-    <h1>Banners</h1>
-    {% for item in informativos if item.tipo == "banner" %}
-      <article>
-        <h2>{{ item.titulo }}</h2>
-        {% if item.conteudo_url %}<img src="{{ item.conteudo_url }}" alt="{{ item.titulo }}">{% endif %}
-        {% if item.texto %}<p>{{ item.texto }}</p>{% endif %}
-        {% if item.link_url %}<a href="{{ item.link_url }}">Saiba mais</a>{% endif %}
-      </article>
-    {% else %}
-      <p>Nenhum banner publicado.</p>
-    {% endfor %}
   </section>
 
-  <section>
-    <h1>Avisos</h1>
-    {% for item in informativos if item.tipo == "aviso" %}
-      <article>
-        <h2>{{ item.titulo }}</h2>
-        <p>{{ item.texto }}</p>
-      </article>
-    {% else %}
-      <p>Nenhum aviso no momento.</p>
-    {% endfor %}
+  <section class="mt-12 grid gap-4 md:grid-cols-2">
+    <div>
+      <h2 class="font-serif text-3xl">Avisos</h2>
+      {% for item in informativos if item.tipo == "aviso" %}
+        <article class="cartao mt-4 rounded-3xl bg-white p-6 shadow">
+          <h3 class="font-serif text-2xl">{{ item.titulo }}</h3>
+          <p class="mt-2 whitespace-pre-line text-stone-600">{{ item.texto }}</p>
+        </article>
+      {% else %}
+        <p class="mt-3 text-stone-600">Nenhum aviso no momento.</p>
+      {% endfor %}
+    </div>
+    <div>
+      <h2 class="font-serif text-3xl">Próximos eventos</h2>
+      {% for evento in eventos %}
+        <article class="cartao mt-4 rounded-3xl bg-white p-6 shadow">
+          <h3 class="font-serif text-2xl">{{ evento.titulo }}</h3>
+          <p class="mt-2">{{ formatar_data_hora_br(evento.data_evento, evento.dia_inteiro) }}</p>
+          {% if evento.local %}<p class="text-stone-600">{{ evento.local }}</p>{% endif %}
+        </article>
+      {% else %}
+        <p class="mt-3 text-stone-600">Nenhum evento publicado.</p>
+      {% endfor %}
+    </div>
   </section>
 
-  <section>
-    <h1>Próximos eventos</h1>
-    {% for evento in eventos %}
-      <article>
-        <h2>{{ evento.titulo }}</h2>
-        <p>{{ formatar_data_hora_br(evento.data_evento, evento.dia_inteiro) }}</p>
-        {% if evento.local %}<p>{{ evento.local }}</p>{% endif %}
-      </article>
-    {% else %}
-      <p>Nenhum evento publicado.</p>
-    {% endfor %}
+  <section class="mt-12">
+    <h2 class="font-serif text-3xl">Campanhas</h2>
+    <div class="mt-4 grid gap-4 md:grid-cols-2">
+      {% for campanha in campanhas %}
+        <article class="cartao overflow-hidden rounded-3xl bg-white shadow">
+          {{ midia(campanha.imagem_url, campanha.titulo, "aspect-video") }}
+          <div class="p-6">
+            <h3 class="font-serif text-2xl">
+              <a href="{{ url_for('publico.campanha', campanha_id=campanha.id) }}">{{ campanha.titulo }}</a>
+            </h3>
+            <p class="mt-3 text-sm">{{ formatar_quantidade(campanha.arrecadado, campanha.unidade) }} de {{ formatar_quantidade(campanha.meta, campanha.unidade) }}</p>
+            <div class="mt-2 h-2 overflow-hidden rounded-full bg-stone-200">
+              <div class="h-full bg-vinho" style="width: {{ percentual_meta(campanha.arrecadado, campanha.meta) }}%"></div>
+            </div>
+          </div>
+        </article>
+      {% else %}
+        <p class="text-stone-600">Nenhuma campanha ativa.</p>
+      {% endfor %}
+    </div>
   </section>
 
-  <section>
-    <h1>Campanhas</h1>
-    {% for campanha in campanhas %}
-      <article>
-        <h2><a href="{{ url_for('publico.campanha', campanha_id=campanha.id) }}">{{ campanha.titulo }}</a></h2>
-        <p>{{ formatar_quantidade(campanha.arrecadado, campanha.unidade) }} de {{ formatar_quantidade(campanha.meta, campanha.unidade) }}</p>
-        <progress value="{{ percentual_meta(campanha.arrecadado, campanha.meta) }}" max="100"></progress>
-      </article>
-    {% else %}
-      <p>Nenhuma campanha ativa.</p>
-    {% endfor %}
+  <section class="mt-12">
+    <h2 class="font-serif text-3xl">Fotos</h2>
+    <p class="mt-2 text-sm text-stone-600">Fotos, GIF e imagens animadas publicados pela igreja aparecem aqui em movimento.</p>
+    <div class="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3">
+      {% for item in informativos if item.tipo == "foto" %}
+        <figure class="cartao overflow-hidden rounded-3xl bg-white shadow">
+          {{ midia(item.conteudo_url, item.titulo, "aspect-square") }}
+          <figcaption class="p-3 text-sm">{{ item.titulo }}</figcaption>
+        </figure>
+      {% else %}
+        <p class="text-stone-600">Nenhuma foto publicada.</p>
+      {% endfor %}
+    </div>
   </section>
 
-  <section>
-    <h1>Fotos</h1>
-    {% for item in informativos if item.tipo == "foto" %}
-      <figure>
-        {% if item.conteudo_url %}<img src="{{ item.conteudo_url }}" alt="{{ item.titulo }}">{% endif %}
-        <figcaption>{{ item.titulo }}</figcaption>
-      </figure>
-    {% else %}
-      <p>Nenhuma foto publicada.</p>
-    {% endfor %}
+  <section class="mt-12">
+    <h2 class="font-serif text-3xl">Vídeos</h2>
+    <div class="mt-4 grid gap-4 md:grid-cols-2">
+      {% for item in informativos if item.tipo == "video" %}
+        <article class="cartao overflow-hidden rounded-3xl bg-white shadow">
+          {% set embed = url_embed_youtube(item.conteudo_url) %}
+          {% if embed %}
+            <iframe class="aspect-video w-full" src="{{ embed }}" title="{{ item.titulo }}" allowfullscreen></iframe>
+          {% else %}
+            {{ midia(item.conteudo_url, item.titulo, "aspect-video") }}
+          {% endif %}
+          <h3 class="p-4 font-serif text-xl">{{ item.titulo }}</h3>
+        </article>
+      {% else %}
+        <p class="text-stone-600">Nenhum vídeo publicado.</p>
+      {% endfor %}
+    </div>
   </section>
 
-  <section>
-    <h1>Vídeos</h1>
-    {% for item in informativos if item.tipo == "video" %}
-      <article>
-        <h2>{{ item.titulo }}</h2>
-        {% set embed = url_embed_youtube(item.conteudo_url) %}
-        {% if embed %}
-          <iframe src="{{ embed }}" title="{{ item.titulo }}" allowfullscreen></iframe>
-        {% elif item.conteudo_url %}
-          <a href="{{ item.conteudo_url }}">Assistir</a>
-        {% endif %}
-      </article>
-    {% else %}
-      <p>Nenhum vídeo publicado.</p>
-    {% endfor %}
-  </section>
-
-  <section>
-    <h1>Subsedes</h1>
-    {% for subsede in subsedes %}
-      <article>
-        <h2>{{ subsede.nome }}</h2>
-        {% if subsede.instagram_url %}
-          <a href="{{ subsede.instagram_url }}">Instagram</a>
-        {% endif %}
-      </article>
-    {% else %}
-      <p>Nenhuma subsede publicada.</p>
-    {% endfor %}
+  <section class="mt-12">
+    <h2 class="font-serif text-3xl">Subsedes</h2>
+    <div class="mt-4 grid gap-4 md:grid-cols-2">
+      {% for subsede in subsedes %}
+        <article class="cartao overflow-hidden rounded-3xl bg-white shadow">
+          {{ midia(subsede.imagem_url, subsede.nome, "aspect-video") }}
+          <div class="p-6">
+            <h3 class="font-serif text-2xl">{{ subsede.nome }}</h3>
+            {% if subsede.instagram_url %}
+              <a class="btn-acao mt-4 border border-vinho text-vinho" href="{{ subsede.instagram_url }}">Instagram</a>
+            {% endif %}
+          </div>
+        </article>
+      {% else %}
+        <p class="text-stone-600">Nenhuma subsede publicada.</p>
+      {% endfor %}
+    </div>
   </section>
 {% endblock %}

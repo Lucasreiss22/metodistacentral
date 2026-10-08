@@ -117,6 +117,15 @@ def test_biblia_avisa_quando_a_api_falha():
     assert interpretar_resposta('{"text": "só o bloco"}') == ((1, "só o bloco"),)
 
 
+def test_gif_e_foto_animada_continuam_animados():
+    from app.utils import tipo_de_midia
+
+    assert tipo_de_midia("https://cdn.exemplo.com/culto.gif") == "animada"
+    assert tipo_de_midia("https://cdn.exemplo.com/foto.webp") == "animada"
+    assert tipo_de_midia("https://cdn.exemplo.com/clipe.mp4") == "video"
+    assert tipo_de_midia("https://cdn.exemplo.com/altar.jpg") == "imagem"
+
+
 def test_id_do_youtube():
     assert id_do_youtube("https://www.youtube.com/watch?v=abc123XYZ_-") == "abc123XYZ_-"
     assert id_do_youtube("https://youtu.be/abc123XYZ_-") == "abc123XYZ_-"

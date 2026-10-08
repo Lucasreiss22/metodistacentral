@@ -1,42 +1,44 @@
 {% extends "base.html" %}
 {% block titulo %}Seja um congregado — {{ configuracao.nome_igreja }}{% endblock %}
 {% block conteudo %}
-  <h1>Seja um congregado</h1>
+  <h1 class="font-serif text-4xl">Seja um congregado</h1>
+  <p class="mt-3 max-w-xl text-stone-600">Deixe seu contato para receber os comunicados da igreja. O envio pede o seu consentimento.</p>
   {% if not subsedes %}
-    <p>O cadastro abre quando houver uma subsede ativa.</p>
+    <p class="mt-6">O cadastro abre quando houver uma subsede ativa.</p>
   {% else %}
-    <form method="post">
+    {% set campo = "mt-1 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 outline-none transition focus:border-vinho focus:ring-2 focus:ring-vinho/20" %}
+    <form class="mt-6 max-w-xl rounded-[1.5rem] bg-white p-6 shadow" method="post">
       {{ formulario.hidden_tag() }}
-      <div style="position:absolute;left:-10000px" aria-hidden="true">
+      <div class="absolute -left-[10000px]" aria-hidden="true">
         {{ formulario.empresa.label }}
         {{ formulario.empresa() }}
       </div>
       <p>
-        {{ formulario.nome.label }}<br>
-        {{ formulario.nome() }}
-        {% for erro in formulario.nome.errors %}<span>{{ erro }}</span>{% endfor %}
+        {{ formulario.nome.label(class_="text-sm") }}
+        {{ formulario.nome(class_=campo) }}
+        {% for erro in formulario.nome.errors %}<span class="text-sm text-vinho">{{ erro }}</span>{% endfor %}
       </p>
-      <p>
-        {{ formulario.email.label }}<br>
-        {{ formulario.email() }}
-        {% for erro in formulario.email.errors %}<span>{{ erro }}</span>{% endfor %}
+      <p class="mt-4">
+        {{ formulario.email.label(class_="text-sm") }}
+        {{ formulario.email(class_=campo) }}
+        {% for erro in formulario.email.errors %}<span class="text-sm text-vinho">{{ erro }}</span>{% endfor %}
       </p>
-      <p>
-        {{ formulario.whatsapp.label }}<br>
-        {{ formulario.whatsapp() }}
-        {% for erro in formulario.whatsapp.errors %}<span>{{ erro }}</span>{% endfor %}
+      <p class="mt-4">
+        {{ formulario.whatsapp.label(class_="text-sm") }}
+        {{ formulario.whatsapp(class_=campo) }}
+        {% for erro in formulario.whatsapp.errors %}<span class="text-sm text-vinho">{{ erro }}</span>{% endfor %}
       </p>
-      <p>
-        {{ formulario.subsede_id.label }}<br>
-        {{ formulario.subsede_id() }}
-        {% for erro in formulario.subsede_id.errors %}<span>{{ erro }}</span>{% endfor %}
+      <p class="mt-4">
+        {{ formulario.subsede_id.label(class_="text-sm") }}
+        {{ formulario.subsede_id(class_=campo) }}
+        {% for erro in formulario.subsede_id.errors %}<span class="text-sm text-vinho">{{ erro }}</span>{% endfor %}
       </p>
-      <p>
-        {{ formulario.consentimento() }}
-        {{ formulario.consentimento.label }}
-        {% for erro in formulario.consentimento.errors %}<span>{{ erro }}</span>{% endfor %}
+      <p class="mt-4 flex items-start gap-3">
+        {{ formulario.consentimento(class_="mt-1") }}
+        {{ formulario.consentimento.label(class_="text-sm") }}
       </p>
-      <button type="submit">Enviar</button>
+      {% for erro in formulario.consentimento.errors %}<span class="text-sm text-vinho">{{ erro }}</span>{% endfor %}
+      <button class="btn-acao mt-6 bg-vinho text-white" type="submit">Enviar</button>
     </form>
   {% endif %}
 {% endblock %}

@@ -1,43 +1,50 @@
 {% extends "base.html" %}
 {% block titulo %}Bíblia online — {{ configuracao.nome_igreja }}{% endblock %}
 {% block conteudo %}
-  <h1>Bíblia online</h1>
-  <form method="get" action="{{ url_for('publico.biblia') }}">
-    <label for="livro">Livro</label>
-    <select id="livro" name="livro">
-      {% for livro in livros %}
-        <option value="{{ livro[0] }}" {% if resultado.livro_id == livro[0] %}selected{% endif %}>{{ livro[1] }}</option>
-      {% endfor %}
-    </select>
-    <label for="capitulo">Capítulo</label>
-    <input id="capitulo" name="capitulo" type="number" min="1" value="{{ resultado.capitulo or 1 }}">
-    <button type="submit">Abrir</button>
+  <h1 class="font-serif text-4xl">Bíblia online</h1>
+  <form class="mt-6 flex flex-col gap-3 rounded-3xl bg-white p-4 shadow sm:flex-row sm:items-end" method="get" action="{{ url_for('publico.biblia') }}">
+    <label class="flex-1 text-sm">Livro
+      <select class="mt-1 w-full rounded-2xl border border-stone-300 px-4 py-3" id="livro" name="livro">
+        {% for livro in livros %}
+          <option value="{{ livro[0] }}" {% if resultado.livro_id == livro[0] %}selected{% endif %}>{{ livro[1] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="text-sm">Capítulo
+      <input class="mt-1 w-full rounded-2xl border border-stone-300 px-4 py-3 sm:w-28" id="capitulo" name="capitulo" type="number" min="1" value="{{ resultado.capitulo or 1 }}">
+    </label>
+    <button class="btn-acao bg-vinho text-white" type="submit">Abrir</button>
   </form>
+
+  <article class="mt-6 rounded-[1.5rem] bg-white p-6 shadow md:p-10">
+    {% if resultado.ok %}
+      <h2 class="font-serif text-3xl">{{ resultado.nome }} {{ resultado.capitulo }}</h2>
+      <div class="mt-6 space-y-3 text-lg leading-relaxed">
+        {% for numero, texto in resultado.versiculos %}
+          <p><sup class="mr-1 text-xs text-vinho">{{ numero }}</sup>{{ texto }}</p>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p>{{ resultado.erro }}</p>
+      <p class="mt-4"><a class="btn-acao bg-vinho text-white" href="{{ resultado.link_externo }}">Abrir um leitor externo</a></p>
+    {% endif %}
+    <div class="mt-8 flex flex-wrap gap-3">
+      {% if resultado.anterior %}
+        <a class="btn-acao border border-vinho text-vinho" href="{{ url_for('publico.biblia', livro_id=resultado.anterior[0], capitulo=resultado.anterior[1]) }}">Capítulo anterior</a>
+      {% endif %}
+      {% if resultado.proximo %}
+        <a class="btn-acao bg-vinho text-white" href="{{ url_for('publico.biblia', livro_id=resultado.proximo[0], capitulo=resultado.proximo[1]) }}">Próximo capítulo</a>
+      {% endif %}
+    </div>
+  </article>
+{% endblock %}
+{% block scripts %}
   <script>
-    document.querySelector("form").addEventListener("submit", function (evento) {
+    document.querySelector("main form").addEventListener("submit", function (evento) {
       evento.preventDefault();
       var livro = document.getElementById("livro").value;
       var capitulo = document.getElementById("capitulo").value || "1";
       window.location = "/biblia/" + livro + "/" + capitulo;
     });
   </script>
-
-  {% if resultado.ok %}
-    <h2>{{ resultado.nome }} {{ resultado.capitulo }}</h2>
-    {% for numero, texto in resultado.versiculos %}
-      <p><sup>{{ numero }}</sup> {{ texto }}</p>
-    {% endfor %}
-  {% else %}
-    <p>{{ resultado.erro }}</p>
-    <p><a href="{{ resultado.link_externo }}">Abrir um leitor externo</a></p>
-  {% endif %}
-
-  <p>
-    {% if resultado.anterior %}
-      <a href="{{ url_for('publico.biblia', livro_id=resultado.anterior[0], capitulo=resultado.anterior[1]) }}">Capítulo anterior</a>
-    {% endif %}
-    {% if resultado.proximo %}
-      <a href="{{ url_for('publico.biblia', livro_id=resultado.proximo[0], capitulo=resultado.proximo[1]) }}">Próximo capítulo</a>
-    {% endif %}
-  </p>
 {% endblock %}

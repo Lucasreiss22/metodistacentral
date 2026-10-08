@@ -275,3 +275,21 @@ def url_embed_youtube(url: str | None) -> str:
     if not ident or not re.fullmatch(r"[\w-]{6,}", ident):
         return ""
     return f"https://www.youtube.com/embed/{ident}"
+
+
+def tipo_de_midia(url: str | None) -> str:
+    """Diz se o endereço é vídeo, imagem animada (GIF/WebP) ou foto parada.
+
+    GIF e WebP animado continuam animados quando a página usa a tag img.
+    """
+    if not url:
+        return ""
+    try:
+        caminho = urlsplit(url.strip()).path.lower()
+    except ValueError:
+        return "imagem"
+    if caminho.endswith((".mp4", ".webm")):
+        return "video"
+    if caminho.endswith((".gif", ".webp", ".apng")):
+        return "animada"
+    return "imagem"

@@ -1,0 +1,15 @@
+{% macro midia(url, titulo, classe="") %}
+  {% if url %}
+    {% set tipo = tipo_de_midia(url) %}
+    <div class="relative overflow-hidden {{ classe }}">
+      {% if tipo == "video" %}
+        <video class="h-full w-full object-cover" src="{{ url }}" autoplay muted loop playsinline title="{{ titulo }}"></video>
+      {% else %}
+        <img class="h-full w-full object-cover" src="{{ url }}" alt="{{ titulo }}">
+      {% endif %}
+      {% if tipo == "animada" or tipo == "video" %}
+        <span class="absolute bottom-3 left-3 rounded-full bg-tinta/80 px-3 py-1 text-xs text-white">Animado</span>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endmacro %}

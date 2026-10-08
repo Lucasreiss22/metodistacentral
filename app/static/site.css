@@ -1,0 +1,82 @@
+.btn-acao {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  overflow: hidden;
+  border-radius: 9999px;
+  padding: 0.85rem 1.4rem;
+  font-weight: 600;
+  line-height: 1;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.btn-acao::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.45) 50%, transparent 70%);
+  transform: translateX(-130%);
+}
+
+.btn-acao:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px rgba(143, 29, 58, 0.22);
+}
+
+.btn-acao:hover::after {
+  animation: brilho 0.7s ease;
+}
+
+.btn-acao:active {
+  transform: translateY(0) scale(0.96);
+}
+
+.cartao {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.cartao:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 18px 40px rgba(31, 26, 23, 0.12);
+}
+
+.surgir {
+  animation: surgir 0.6s ease both;
+}
+
+@keyframes brilho {
+  to { transform: translateX(130%); }
+}
+
+@keyframes surgir {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+.fc {
+  --fc-border-color: #e7e0d6;
+  --fc-button-bg-color: #8f1d3a;
+  --fc-button-border-color: #8f1d3a;
+  --fc-button-hover-bg-color: #6f132b;
+  --fc-button-hover-border-color: #6f132b;
+  --fc-button-active-bg-color: #6f132b;
+  --fc-today-bg-color: #f8e7ea;
+  font-family: Outfit, sans-serif;
+}
+
+.fc .fc-button {
+  border-radius: 9999px;
+  text-transform: capitalize;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-acao,
+  .btn-acao::after,
+  .cartao,
+  .surgir {
+    animation: none !important;
+    transition: none !important;
+  }
+}
