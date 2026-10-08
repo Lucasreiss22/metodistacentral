@@ -28,14 +28,30 @@ VARIAVEIS_AMBIENTE = (
 _URI_NAO_CONFIGURADA = "postgresql+psycopg://invalido:invalido@127.0.0.1:1/invalido"
 
 
+# O painel novo do Supabase mostra outros nomes para as mesmas chaves.
+_ALIASES = {
+    "SUPABASE_ANON_KEY": ("SUPABASE_ANON_KEY", "SUPABASE_PUBLISHABLE_KEY"),
+    "SUPABASE_SERVICE_KEY": ("SUPABASE_SERVICE_KEY", "SUPABASE_SECRET_KEY"),
+}
+
+
 def ler_variavel(nome: str) -> str:
     """Valor da variável, sem espaços nas pontas. Vazio se não existir."""
     return os.environ.get(nome, "").strip()
 
 
+def ler_configuracao(nome: str) -> str:
+    """Lê o nome usado pelo Flask ou, se estiver vazio, o nome do painel."""
+    for candidato in _ALIASES.get(nome, (nome,)):
+        valor = ler_variavel(candidato)
+        if valor:
+            return valor
+    return ""
+
+
 def variaveis_vazias() -> list[str]:
     """Nomes ainda em branco. Não devolve os valores."""
-    return [nome for nome in VARIAVEIS_AMBIENTE if not ler_variavel(nome)]
+    return [nome for nome in VARIAVEIS_AMBIENTE if not ler_configuracao(nome)]
 
 
 class Config:
@@ -47,9 +63,12 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = opcoes_do_banco(SQLALCHEMY_DATABASE_URI)
 
-    SUPABASE_URL = ler_variavel("SUPABASE_URL").rstrip("/")
-    SUPABASE_ANON_KEY = ler_variavel("SUPABASE_ANON_KEY")
-    SUPABASE_SERVICE_KEY = ler_variavel("SUPABASE_SERVICE_KEY")
+    SUPABASE_URL = ler_configuracao("SUPABASE_URL").rstrip("/")
+    SUPABASE_ANON_KEY = ler_configuracao("SUPABASE_ANON_KEY")
+    SUPABASE_SERVICE_KEY = ler_configuracao("SUPABASE_SERVICE_KEY")
+    SUPABASE_JWKS_URL = ler_variavel("SUPABASE_JWKS_URL") or (
+        f"{SUPABASE_URL}/auth/v1/.well-known/jwks.json" if SUPABASE_URL else ""
+    )
     BREVO_API_KEY = ler_variavel("BREVO_API_KEY")
     EMAIL_REMETENTE = ler_variavel("EMAIL_REMETENTE")
     NOME_REMETENTE = ler_variavel("NOME_REMETENTE")

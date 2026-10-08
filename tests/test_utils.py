@@ -102,6 +102,17 @@ def test_opcoes_desligam_prepared_statement_so_na_6543():
     assert transacao["connect_args"]["prepare_threshold"] is None
 
 
+def test_aceita_os_nomes_novos_das_chaves_do_supabase(monkeypatch):
+    from app.config import ler_configuracao
+
+    monkeypatch.delenv("SUPABASE_ANON_KEY", raising=False)
+    monkeypatch.delenv("SUPABASE_SERVICE_KEY", raising=False)
+    monkeypatch.setenv("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_teste")
+    monkeypatch.setenv("SUPABASE_SECRET_KEY", "sb_secret_teste")
+    assert ler_configuracao("SUPABASE_ANON_KEY") == "sb_publishable_teste"
+    assert ler_configuracao("SUPABASE_SERVICE_KEY") == "sb_secret_teste"
+
+
 def test_token_de_descadastro_e_opaco():
     primeiro = gerar_token_descadastro()
     segundo = gerar_token_descadastro()
