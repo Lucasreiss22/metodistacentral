@@ -2,6 +2,9 @@
 {% block titulo %}Painel{% endblock %}
 {% block conteudo %}
   <h1 class="font-serif text-4xl">Painel</h1>
+  {% if admin_atual %}
+    <p class="mt-2 text-stone-600">{{ admin_atual.nome }}{% if admin_atual.ministerio %} · {{ admin_atual.ministerio }}{% endif %}{% if admin_atual.eh_super_admin %} · administrador master{% endif %}</p>
+  {% endif %}
   <div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
     {% for rotulo, valor in [
       ("Subsedes", totais.subsedes),

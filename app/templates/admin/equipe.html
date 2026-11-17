@@ -1,0 +1,52 @@
+{% extends "admin/base.html" %}
+{% block titulo %}Equipe{% endblock %}
+{% block conteudo %}
+  {% set campo = "mt-1 w-full rounded-2xl border border-stone-300 px-4 py-3" %}
+  <div class="grid gap-8 lg:grid-cols-[1fr_1.1fr]">
+    <section>
+      <h1 class="font-serif text-4xl">Equipe</h1>
+      <p class="mt-2 text-sm text-stone-600">Cada acesso entra com e-mail e senha. O administrador master pode tudo. Os demais só veem o que estiver marcado.</p>
+      {% for atual in itens %}
+        <article class="mt-4 rounded-3xl bg-white p-4 shadow">
+          <h2 class="font-serif text-xl">{{ atual.nome }}</h2>
+          <p class="text-sm text-stone-600">{{ atual.email }}{% if atual.ministerio %} · {{ atual.ministerio }}{% endif %}</p>
+          <p class="mt-1 text-sm">{{ "Administrador master" if atual.eh_super_admin else (atual.codigos()|join(", ") or "sem permissões") }}{% if not atual.ativo %} · desativado{% endif %}</p>
+          <div class="mt-3 flex gap-2">
+            <a class="btn-acao border border-stone-300 px-3 py-2 text-sm" href="{{ url_for('admin.equipe', item_id=atual.id) }}">Editar</a>
+            <form method="post" action="{{ url_for('admin.excluir_equipe', item_id=atual.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn-acao border border-vinho px-3 py-2 text-sm text-vinho" type="submit">Excluir</button>
+            </form>
+          </div>
+        </article>
+      {% else %}
+        <p class="mt-4 text-stone-600">Nenhum acesso.</p>
+      {% endfor %}
+    </section>
+    <form class="rounded-[1.5rem] bg-white p-6 shadow" method="post" action="{{ url_for('admin.equipe', item_id=item.id) if item else url_for('admin.equipe') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <h2 class="font-serif text-2xl">{{ "Editar acesso" if item else "Novo acesso" }}</h2>
+      <label class="mt-4 block text-sm">Nome<input class="{{ campo }}" name="nome" value="{{ request.form.get('nome', item.nome if item else '') }}" required></label>
+      <label class="mt-4 block text-sm">E-mail<input class="{{ campo }}" name="email" type="email" autocomplete="off" value="{{ request.form.get('email', item.email if item else '') }}" required></label>
+      <label class="mt-4 block text-sm">Ministério<input class="{{ campo }}" name="ministerio" placeholder="Ministério de Mídia" value="{{ request.form.get('ministerio', item.ministerio if item else '') }}"></label>
+      <label class="mt-4 block text-sm">Senha
+        <input class="{{ campo }}" name="senha" type="password" autocomplete="new-password" {% if not item %}required{% endif %}>
+      </label>
+      <p class="mt-1 text-xs text-stone-500">{% if item %}Deixe em branco para manter a senha atual.{% else %}Mínimo de 8 caracteres.{% endif %}</p>
+      {% set super = ('eh_super_admin' in request.form) if request.method == 'POST' else (item.eh_super_admin if item else false) %}
+      {% set ativo = ('ativo' in request.form) if request.method == 'POST' else (item.ativo if item else true) %}
+      <label class="mt-4 flex items-start gap-2 text-sm"><input name="eh_super_admin" type="checkbox" {% if super %}checked{% endif %}> <span>Administrador master. Ignora as marcas abaixo e controla a equipe.</span></label>
+      <label class="mt-3 flex items-center gap-2 text-sm"><input name="ativo" type="checkbox" {% if ativo %}checked{% endif %}> Acesso ativo</label>
+      <fieldset class="mt-6">
+        <legend class="font-serif text-xl">Permissões</legend>
+        {% for permissao in catalogo %}
+          <label class="mt-3 flex items-start gap-3 text-sm">
+            <input class="mt-1" type="checkbox" name="permissao" value="{{ permissao.codigo }}" {% if permissao.codigo in marcadas %}checked{% endif %}>
+            <span>{{ permissao.rotulo }} — {{ permissao.descricao }} <span class="text-stone-500">{{ permissao.codigo }}</span></span>
+          </label>
+        {% endfor %}
+      </fieldset>
+      <button class="btn-acao mt-6 bg-vinho text-white" type="submit">Salvar</button>
+    </form>
+  </div>
+{% endblock %}

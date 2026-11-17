@@ -73,6 +73,10 @@ class Config:
     EMAIL_REMETENTE = ler_variavel("EMAIL_REMETENTE")
     NOME_REMETENTE = ler_variavel("NOME_REMETENTE")
     URL_PUBLICA = ler_variavel("URL_PUBLICA").rstrip("/")
+    ADMIN_EMAIL = ler_variavel("ADMIN_EMAIL")
+    ADMIN_SENHA = ler_variavel("ADMIN_SENHA")
+    WHATSAPP_TOKEN = ler_variavel("WHATSAPP_TOKEN")
+    WHATSAPP_PHONE_NUMBER_ID = ler_variavel("WHATSAPP_PHONE_NUMBER_ID")
 
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
     PERMANENT_SESSION_LIFETIME = timedelta(hours=8)

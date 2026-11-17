@@ -62,12 +62,21 @@ class Congregado(db.Model):
     __table_args__ = (
         Index("idx_congregados_email_lower", text("lower(email)"), unique=True),
         Index("idx_congregados_subsede_id", "subsede_id"),
+        CheckConstraint(
+            "opt_in_status IN ('pendente', 'confirmado', 'revogado')",
+            name="ck_congregados_opt_in",
+        ),
+        CheckConstraint(
+            "status_envio IN ('nunca_enviado', 'preparado', 'enviado', 'falha', 'opt_out')",
+            name="ck_congregados_status_envio",
+        ),
     )
 
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.Text, nullable=False)
     email = db.Column(db.Text, nullable=False)
     whatsapp = db.Column(db.Text, nullable=False)
+    whatsapp_e164 = db.Column(db.Text, nullable=False, default="")
     subsede_id = db.Column(
         db.Integer,
         db.ForeignKey("subsedes.id", ondelete="SET NULL"),
@@ -81,8 +90,24 @@ class Congregado(db.Model):
         default=gerar_token_descadastro,
     )
     data_cadastro = db.Column(db.DateTime(timezone=True), nullable=False, default=agora_utc)
+    consentimento_em = db.Column(db.DateTime(timezone=True), nullable=True)
+    opt_in_status = db.Column(db.Text, nullable=False, default="pendente")
+    opt_in_origem = db.Column(db.Text, nullable=False, default="")
+    status_envio = db.Column(db.Text, nullable=False, default="nunca_enviado")
+    ultimo_envio_em = db.Column(db.DateTime(timezone=True), nullable=True)
+    ultimo_erro_envio = db.Column(db.Text, nullable=False, default="")
+    excluido_em = db.Column(db.DateTime(timezone=True), nullable=True)
+    motivo_exclusao = db.Column(db.Text, nullable=False, default="")
+    anonimizado = db.Column(db.Boolean, nullable=False, default=False)
 
     subsede = db.relationship("Subsede", back_populates="congregados")
+
+    @property
+    def numero_internacional(self) -> str:
+        """55 + DDD + número, pronto para a API da Meta."""
+        from app.services.whatsapp import numero_whatsapp
+
+        return self.whatsapp_e164 or numero_whatsapp(self.whatsapp) or ""
 
     def __repr__(self) -> str:
         return f"<Congregado {self.id}>"
@@ -138,6 +163,10 @@ class Evento(db.Model):
             "status IN ('ativo', 'encerrado', 'cancelado')",
             name="ck_eventos_status",
         ),
+        CheckConstraint(
+            "categoria IN ('geral', 'empreendedores')",
+            name="ck_eventos_categoria",
+        ),
         Index("idx_eventos_data_evento", "data_evento"),
     )
 
@@ -155,6 +184,7 @@ class Evento(db.Model):
     )
     imagem_url = db.Column(db.Text, nullable=False, default="")
     status = db.Column(db.Text, nullable=False, default="ativo")
+    categoria = db.Column(db.Text, nullable=False, default="geral")
     criado_em = db.Column(db.DateTime(timezone=True), nullable=False, default=agora_utc)
 
     subsede = db.relationship("Subsede", back_populates="eventos")
@@ -241,18 +271,75 @@ class Configuracao(db.Model):
 
 
 class Administrador(db.Model):
-    """Quem pode entrar no painel. A senha fica no Supabase Auth, não aqui."""
+    """Quem pode entrar no painel. A senha fica só como hash."""
 
     __tablename__ = "administradores"
 
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.Text, nullable=False, unique=True)
     nome = db.Column(db.Text, nullable=False)
+    senha_hash = db.Column(db.Text, nullable=False, default="")
+    eh_super_admin = db.Column(db.Boolean, nullable=False, default=False)
+    ministerio = db.Column(db.Text, nullable=False, default="")
     ativo = db.Column(db.Boolean, nullable=False, default=True)
     criado_em = db.Column(db.DateTime(timezone=True), nullable=False, default=agora_utc)
 
+    permissoes = db.relationship(
+        "AdministradorPermissao",
+        back_populates="administrador",
+        cascade="all, delete-orphan",
+    )
+
+    def codigos(self) -> set[str]:
+        return {item.codigo for item in self.permissoes}
+
+    def pode(self, *codigos: str) -> bool:
+        if self.eh_super_admin:
+            return True
+        return bool(set(codigos) & self.codigos())
+
     def __repr__(self) -> str:
         return f"<Administrador {self.id}>"
+
+
+class AdministradorPermissao(db.Model):
+    """Uma permissão marcada para um acesso que não é o administrador master."""
+
+    __tablename__ = "administrador_permissoes"
+
+    administrador_id = db.Column(
+        db.Integer,
+        db.ForeignKey("administradores.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    codigo = db.Column(db.Text, primary_key=True)
+
+    administrador = db.relationship("Administrador", back_populates="permissoes")
+
+    def __repr__(self) -> str:
+        return f"<AdministradorPermissao {self.administrador_id} {self.codigo}>"
+
+
+class SolicitacaoLgpd(db.Model):
+    """Pedido de exclusão. Não guarda e-mail nem telefone, só o hash."""
+
+    __tablename__ = "solicitacoes_lgpd"
+    __table_args__ = (
+        CheckConstraint(
+            "resultado IN ('removido', 'nao_encontrado')",
+            name="ck_solicitacoes_lgpd_resultado",
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    email_hash = db.Column(db.Text, nullable=False)
+    whatsapp_hash = db.Column(db.Text, nullable=False, default="")
+    motivo = db.Column(db.Text, nullable=False, default="")
+    resultado = db.Column(db.Text, nullable=False)
+    criado_em = db.Column(db.DateTime(timezone=True), nullable=False, default=agora_utc)
+
+    def __repr__(self) -> str:
+        return f"<SolicitacaoLgpd {self.id}>"
 
 
 class Comunicado(db.Model):

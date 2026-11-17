@@ -29,7 +29,7 @@ def app():
         db.drop_all()
 
 
-def test_create_all_registra_as_nove_tabelas(app):
+def test_create_all_registra_as_tabelas_do_site(app):
     assert set(db.metadata.tables) == {
         "subsedes",
         "congregados",
@@ -39,6 +39,8 @@ def test_create_all_registra_as_nove_tabelas(app):
         "feriados_locais",
         "configuracoes",
         "administradores",
+        "administrador_permissoes",
+        "solicitacoes_lgpd",
         "comunicados",
     }
 

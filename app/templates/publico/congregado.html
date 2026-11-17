@@ -25,7 +25,8 @@
       </p>
       <p class="mt-4">
         {{ formulario.whatsapp.label(class_="text-sm") }}
-        {{ formulario.whatsapp(class_=campo) }}
+        {{ formulario.whatsapp(class_=campo, placeholder="(21) 99999-9999", inputmode="tel", autocomplete="tel", **{"data-whatsapp": "1"}) }}
+        <span class="text-xs text-stone-500">DDD e número, com ou sem o 9.</span>
         {% for erro in formulario.whatsapp.errors %}<span class="text-sm text-vinho">{{ erro }}</span>{% endfor %}
       </p>
       <p class="mt-4">
@@ -39,6 +40,7 @@
       </p>
       {% for erro in formulario.consentimento.errors %}<span class="text-sm text-vinho">{{ erro }}</span>{% endfor %}
       <button class="btn-acao mt-6 bg-vinho text-white" type="submit">Enviar</button>
+      <p class="mt-4 text-sm"><a class="text-vinho" href="{{ url_for('publico.lgpd') }}">Descadastrar / Remoção de Dados (LGPD)</a></p>
     </form>
   {% endif %}
 {% endblock %}

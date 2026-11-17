@@ -30,17 +30,8 @@
         </form>
       </div>
       <nav class="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 pb-4 text-sm">
-        {% for endereco, rotulo in [
-          ("admin.subsedes", "Subsedes"),
-          ("admin.informativos", "Informativos"),
-          ("admin.eventos", "Eventos"),
-          ("admin.campanhas", "Campanhas"),
-          ("admin.feriados", "Feriados"),
-          ("admin.congregados", "Congregados"),
-          ("admin.comunicados", "Comunicados"),
-          ("admin.configuracoes", "Configurações"),
-        ] %}
-          <a class="shrink-0 rounded-full px-3 py-2 {% if request.endpoint == endereco %}bg-vinho text-white{% else %}bg-white{% endif %}" href="{{ url_for(endereco) }}">{{ rotulo }}</a>
+        {% for item in itens_menu %}
+          <a class="shrink-0 rounded-full px-3 py-2 {% if request.endpoint in item.ativos %}bg-vinho text-white{% else %}bg-white{% endif %}" href="{{ url_for(item.endpoint) }}">{{ item.rotulo }}</a>
         {% endfor %}
       </nav>
     </header>
@@ -53,5 +44,6 @@
     {% endwith %}
     {% block conteudo %}{% endblock %}
   </main>
+  <script src="{{ url_for('static', filename='site.js') }}"></script>
 </body>
 </html>

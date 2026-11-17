@@ -1,1 +1,1 @@
-"""Serviços externos e regras de calendário, Bíblia e mensagens."""
+"""Serviços externos e regras de calendário, mensagens e LGPD."""

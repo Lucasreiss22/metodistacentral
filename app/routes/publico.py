@@ -9,10 +9,10 @@ from sqlalchemy.exc import IntegrityError
 from zoneinfo import ZoneInfo
 
 from app.extensions import db
-from app.formularios import FormularioCongregado
+from app.formularios import FormularioCongregado, FormularioRemocao
 from app.models import Campanha, Congregado, Configuracao, Evento, FeriadoLocal, Informativo, Subsede
-from app.services.biblia import buscar_capitulo, buscar_livro, listar_livros
 from app.services.brevo import enviar_email
+from app.services.lgpd import aplicar_opt_in, aplicar_opt_out, processar_exclusao
 from app.services.feriados import CORES, LEGENDA, calendario_do_ano
 from app.services.mensagens import assunto_boas_vindas, link_de_descadastro, texto_boas_vindas
 from app.services.whatsapp import link_wa_me
@@ -221,23 +221,6 @@ def calendario_dados():
     return jsonify(itens)
 
 
-@bp.get("/biblia")
-@bp.get("/biblia/<livro_id>/<int:capitulo>")
-def biblia(livro_id: str = "genesis", capitulo: int = 1):
-    if request.args.get("livro"):
-        livro_id = request.args.get("livro")
-    if request.args.get("capitulo", "").isdigit():
-        capitulo = int(request.args["capitulo"])
-    cliente = current_app.config.get("CLIENTE_BIBLIA")
-    resultado = buscar_capitulo(livro_id, capitulo, cliente=cliente)
-    return render_template(
-        "publico/biblia.html",
-        livros=listar_livros(),
-        resultado=resultado,
-        livro_atual=buscar_livro(livro_id),
-    )
-
-
 @bp.route("/congregado", methods=["GET", "POST"])
 def congregado():
     ativas = subsedes_ativas()
@@ -257,9 +240,8 @@ def _gravar_congregado(formulario: FormularioCongregado) -> Congregado:
     existente = Congregado.query.filter(func.lower(Congregado.email) == email).one_or_none()
     if existente:
         existente.nome = formulario.nome.data.strip()
-        existente.whatsapp = formulario.whatsapp.data.strip()
         existente.subsede_id = formulario.subsede_id.data
-        existente.recebe_noticias = True
+        aplicar_opt_in(existente, formulario.whatsapp.data.strip())
         db.session.commit()
         return existente
 
@@ -268,8 +250,8 @@ def _gravar_congregado(formulario: FormularioCongregado) -> Congregado:
         email=email,
         whatsapp=formulario.whatsapp.data.strip(),
         subsede_id=formulario.subsede_id.data,
-        recebe_noticias=True,
     )
+    aplicar_opt_in(pessoa, formulario.whatsapp.data.strip())
     db.session.add(pessoa)
     try:
         db.session.commit()
@@ -279,9 +261,8 @@ def _gravar_congregado(formulario: FormularioCongregado) -> Congregado:
         if de_novo is None:
             raise
         de_novo.nome = formulario.nome.data.strip()
-        de_novo.whatsapp = formulario.whatsapp.data.strip()
         de_novo.subsede_id = formulario.subsede_id.data
-        de_novo.recebe_noticias = True
+        aplicar_opt_in(de_novo, formulario.whatsapp.data.strip())
         db.session.commit()
         return de_novo
     return pessoa
@@ -318,8 +299,25 @@ def _enviar_boas_vindas(pessoa: Congregado) -> None:
 @bp.get("/descadastrar/<token>")
 def descadastrar(token: str):
     pessoa = Congregado.query.filter_by(token_descadastro=token).one_or_none()
-    if pessoa is None:
+    if pessoa is None or pessoa.anonimizado:
         return render_template("publico/descadastrar.html", encontrado=False), 404
-    pessoa.recebe_noticias = False
+    aplicar_opt_out(pessoa)
     db.session.commit()
     return render_template("publico/descadastrar.html", encontrado=True)
+
+
+@bp.route("/lgpd", methods=["GET", "POST"])
+def lgpd():
+    formulario = FormularioRemocao()
+    if formulario.validate_on_submit():
+        if (formulario.empresa.data or "").strip():
+            return render_template("publico/lgpd.html", formulario=formulario, confirmado=True)
+        resultado = processar_exclusao(
+            formulario.email.data,
+            formulario.whatsapp.data,
+            formulario.motivo.data or "",
+        )
+        if resultado == "removido":
+            return render_template("publico/lgpd.html", formulario=formulario, confirmado=True)
+        formulario.email.errors.append("Não encontramos um cadastro com esse e-mail e esse WhatsApp.")
+    return render_template("publico/lgpd.html", formulario=formulario, confirmado=False)

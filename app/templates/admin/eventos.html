@@ -9,7 +9,7 @@
       {% for atual in itens %}
         <article class="mt-4 rounded-3xl bg-white p-4 shadow">
           <h2 class="font-serif text-xl">{{ atual.titulo }}</h2>
-          <p class="text-sm text-stone-600">{{ formatar_data_hora_br(atual.data_evento, atual.dia_inteiro) }} · {{ atual.status }}</p>
+          <p class="text-sm text-stone-600">{{ formatar_data_hora_br(atual.data_evento, atual.dia_inteiro) }} · {{ atual.status }} · {{ atual.categoria }}</p>
           <div class="mt-3 flex gap-2">
             <a class="btn-acao border border-stone-300 px-3 py-2 text-sm" href="{{ url_for('admin.eventos', item_id=atual.id) }}">Editar</a>
             <form method="post" action="{{ url_for('admin.excluir_evento', item_id=atual.id) }}">
@@ -38,6 +38,18 @@
           {% endfor %}
         </select>
       </label>
+      {% if so_empreendedores %}
+        <input type="hidden" name="categoria" value="empreendedores">
+        <p class="mt-4 text-sm text-stone-600">Este acesso grava o evento no Ministério de Empreendedores.</p>
+      {% else %}
+        <label class="mt-4 block text-sm">Categoria
+          <select class="{{ campo }}" name="categoria">
+            {% for categoria in ["geral", "empreendedores"] %}
+              <option value="{{ categoria }}" {% if request.form.get('categoria', item.categoria if item else 'geral') == categoria %}selected{% endif %}>{{ categoria }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      {% endif %}
       <label class="mt-4 block text-sm">Status
         <select class="{{ campo }}" name="status">
           {% for status in ["ativo", "encerrado", "cancelado"] %}

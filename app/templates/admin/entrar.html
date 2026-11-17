@@ -4,9 +4,9 @@
   <section class="mx-auto max-w-md rounded-[1.5rem] bg-white p-6 shadow md:p-8">
     <p class="text-sm uppercase tracking-[0.16em] text-ouro">Igreja Metodista Central</p>
     <h1 class="mt-2 font-serif text-4xl">Entrar no painel</h1>
-    <p class="mt-3 text-sm text-stone-600">A senha é a criada em Authentication → Users, no Supabase. O mesmo e-mail precisa estar na tabela de administradores. O site não tem senha mestra.</p>
+    <p class="mt-3 text-sm text-stone-600">Use o e-mail e a senha que o administrador da igreja definiu para o seu ministério. O site não tem senha mestra.</p>
     {% if sem_administrador %}
-      <p class="mt-4 rounded-2xl bg-creme px-4 py-3 text-sm">Ainda não há administrador cadastrado. Crie o usuário no Supabase Auth e rode no SQL Editor o INSERT comentado no final de supabase/schema.sql, com o mesmo e-mail.</p>
+      <p class="mt-4 rounded-2xl bg-creme px-4 py-3 text-sm">Ainda não há administrador cadastrado. Na pasta do projeto, rode flask criar-super-admin.</p>
     {% endif %}
     {% if erro %}<p class="mt-4 text-sm text-vinho" role="alert">{{ erro }}</p>{% endif %}
     <form class="mt-6" method="post">

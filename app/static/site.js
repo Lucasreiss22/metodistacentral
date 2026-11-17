@@ -79,8 +79,27 @@ function iniciarCalendario() {
   calendario.render();
 }
 
+function iniciarMascaraWhatsapp() {
+  document.querySelectorAll("[data-whatsapp]").forEach((campo) => {
+    const formatar = () => {
+      const digitos = campo.value.replace(/\D/g, "").slice(0, 11);
+      if (digitos.length > 10) {
+        campo.value = `(${digitos.slice(0, 2)}) ${digitos.slice(2, 7)}-${digitos.slice(7)}`;
+      } else if (digitos.length > 6) {
+        campo.value = `(${digitos.slice(0, 2)}) ${digitos.slice(2, 6)}-${digitos.slice(6)}`;
+      } else if (digitos.length > 2) {
+        campo.value = `(${digitos.slice(0, 2)}) ${digitos.slice(2)}`;
+      } else {
+        campo.value = digitos ? `(${digitos}` : "";
+      }
+    };
+    campo.addEventListener("input", formatar);
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   iniciarMenu();
   iniciarCarrossel();
   iniciarCalendario();
+  iniciarMascaraWhatsapp();
 });

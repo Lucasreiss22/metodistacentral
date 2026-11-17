@@ -1,4 +1,4 @@
-"""Painel da igreja. A senha é a do Supabase Auth, conferida em app.auth."""
+"""Painel da igreja. A senha é um hash local, conferido em app.auth."""
 
 import csv
 import io
@@ -12,6 +12,7 @@ from flask import (
     abort,
     current_app,
     flash,
+    g,
     redirect,
     render_template,
     request,
@@ -21,11 +22,12 @@ from flask import (
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 
-from app.auth import autenticar
+from app.auth import hash_senha, senha_confere, validar_senha_nova
 from app.extensions import db
 from app.formularios import erro_email, erro_nome, erro_whatsapp
 from app.models import (
     Administrador,
+    AdministradorPermissao,
     Campanha,
     Comunicado,
     Congregado,
@@ -33,8 +35,12 @@ from app.models import (
     Evento,
     FeriadoLocal,
     Informativo,
+    SolicitacaoLgpd,
     Subsede,
 )
+from app.permissoes import ACESSO, CATALOGO, CODIGOS, MENU
+from app.services.lgpd import aplicar_opt_out
+from app.services.whatsapp import numero_whatsapp
 from app.services.brevo import enviar_lotes
 from app.services.mensagens import montar_comunicados
 from app.services.storage import enviar_midia
@@ -55,22 +61,76 @@ _TIPOS_FERIADO = ("estadual", "municipal", "ponto_facultativo")
 
 
 def _admin_atual():
+    if "admin_resolvido" in g:
+        return g.admin_resolvido
     ident = session.get("admin_id")
-    if not ident:
-        return None
-    admin = db.session.get(Administrador, ident)
+    admin = db.session.get(Administrador, ident) if ident else None
     if admin is None or not admin.ativo:
-        session.clear()
-        return None
+        if ident:
+            session.clear()
+        admin = None
+    g.admin_resolvido = admin
     return admin
+
+
+def _so_fotos() -> bool:
+    admin = _admin_atual()
+    return bool(admin and not admin.eh_super_admin and not admin.pode("criar_informativos"))
+
+
+def _so_empreendedores() -> bool:
+    admin = _admin_atual()
+    return bool(admin and not admin.eh_super_admin and not admin.pode("gerenciar_eventos"))
+
+
+def _ultimo_super(admin: Administrador) -> bool:
+    if not admin.eh_super_admin or not admin.ativo:
+        return False
+    outros = Administrador.query.filter(
+        Administrador.eh_super_admin.is_(True),
+        Administrador.ativo.is_(True),
+        Administrador.id != admin.id,
+    ).count()
+    return outros == 0
+
+
+@bp.app_context_processor
+def injetar_acesso():
+    admin = _admin_atual()
+
+    def pode(*codigos):
+        return bool(admin and admin.pode(*codigos))
+
+    itens = []
+    if admin is not None:
+        for endpoint, rotulo, codigos, ativos in MENU:
+            if codigos is None:
+                if admin.eh_super_admin:
+                    itens.append({"endpoint": endpoint, "rotulo": rotulo, "ativos": ativos})
+            elif admin.pode(*codigos):
+                itens.append({"endpoint": endpoint, "rotulo": rotulo, "ativos": ativos})
+    return {"admin_atual": admin, "pode": pode, "itens_menu": itens}
 
 
 @bp.before_request
 def exigir_login():
+    # g vive no contexto da aplicação. Nos testes ele atravessa pedidos;
+    # cada pedido precisa resolver o acesso de novo.
+    g.pop("admin_resolvido", None)
     if request.endpoint == "admin.entrar":
         return None
-    if _admin_atual() is None:
+    admin = _admin_atual()
+    if admin is None:
         return redirect(url_for("admin.entrar"))
+    if request.endpoint in {"admin.equipe", "admin.equipe_item", "admin.excluir_equipe"}:
+        if not admin.eh_super_admin:
+            flash("Só o administrador master altera a equipe.")
+            return redirect(url_for("admin.painel"))
+        return None
+    codigos = ACESSO.get(request.endpoint)
+    if codigos and not admin.pode(*codigos):
+        flash("Seu acesso não inclui esta área.")
+        return redirect(url_for("admin.painel"))
     return None
 
 
@@ -183,24 +243,20 @@ def entrar():
         return redirect(url_for("admin.painel"))
     erro = ""
     if request.method == "POST":
-        resultado = autenticar(
-            _texto("email"),
-            request.form.get("senha") or "",
-            current_app.config.get("SUPABASE_URL", ""),
-            current_app.config.get("SUPABASE_ANON_KEY", ""),
-            cliente=current_app.config.get("CLIENTE_AUTH"),
-        )
-        if not resultado.ok:
-            erro = resultado.erro
+        email = normalizar_email(_texto("email"))
+        senha = request.form.get("senha") or ""
+        if not email or not senha:
+            erro = "Informe e-mail e senha."
         else:
-            email = normalizar_email(resultado.email)
             admin = Administrador.query.filter(func.lower(Administrador.email) == email).one_or_none()
-            if admin is None:
-                erro = "Este e-mail autenticou, mas não está autorizado no painel."
+            confere = senha_confere(senha, admin.senha_hash if admin else "")
+            if admin is None or not confere:
+                erro = "E-mail ou senha não conferem."
             elif not admin.ativo:
                 erro = "Este acesso está desativado."
             else:
                 session.clear()
+                g.pop("admin_resolvido", None)
                 session["admin_id"] = admin.id
                 session.permanent = True
                 return redirect(url_for("admin.painel"))
@@ -214,6 +270,7 @@ def entrar():
 @bp.post("/sair")
 def sair():
     session.clear()
+    g.pop("admin_resolvido", None)
     return redirect(url_for("admin.entrar"))
 
 
@@ -300,10 +357,18 @@ def informativos(item_id=None):
     item = db.session.get(Informativo, item_id) if item_id else None
     if item_id and item is None:
         abort(404)
+    if item is not None and _so_fotos() and item.tipo != "foto":
+        abort(404)
+    tipos = ["foto"] if _so_fotos() else list(_TIPOS_INFORMATIVO)
+    consulta = Informativo.query
+    if _so_fotos():
+        consulta = consulta.filter_by(tipo="foto")
     if request.method == "POST":
         titulo = _texto("titulo")
         tipo = _texto("tipo")
-        if len(titulo) < 2 or tipo not in _TIPOS_INFORMATIVO:
+        if _so_fotos() and tipo != "foto":
+            flash("Seu acesso só altera fotos.")
+        elif len(titulo) < 2 or tipo not in tipos:
             flash("Informe o título e o tipo.")
         else:
             url, erro = _url_da_midia("conteudo_url")
@@ -327,13 +392,18 @@ def informativos(item_id=None):
                     flash("Informativo salvo.")
                     return redirect(url_for("admin.informativos"))
                 flash("Não foi possível salvar o informativo.")
-    return render_template("admin/informativos.html", itens=Informativo.query.order_by(Informativo.ordem, Informativo.id).all(), item=item)
+    return render_template(
+        "admin/informativos.html",
+        itens=consulta.order_by(Informativo.ordem, Informativo.id).all(),
+        item=item,
+        tipos=tipos,
+    )
 
 
 @bp.post("/informativos/<int:item_id>/excluir")
 def excluir_informativo(item_id):
     item = db.session.get(Informativo, item_id)
-    if item is None:
+    if item is None or (_so_fotos() and item.tipo != "foto"):
         abort(404)
     db.session.delete(item)
     db.session.commit()
@@ -347,6 +417,11 @@ def eventos(item_id=None):
     item = db.session.get(Evento, item_id) if item_id else None
     if item_id and item is None:
         abort(404)
+    if item is not None and _so_empreendedores() and item.categoria != "empreendedores":
+        abort(404)
+    consulta = Evento.query
+    if _so_empreendedores():
+        consulta = consulta.filter_by(categoria="empreendedores")
     if request.method == "POST":
         titulo = _texto("titulo")
         momento = _data_hora("data_evento")
@@ -370,23 +445,29 @@ def eventos(item_id=None):
                 item.subsede_id = _inteiro("subsede_id")
                 item.imagem_url = imagem
                 item.status = status
+                if _so_empreendedores():
+                    item.categoria = "empreendedores"
+                else:
+                    categoria = _texto("categoria")
+                    item.categoria = categoria if categoria in {"geral", "empreendedores"} else "geral"
                 if _gravar():
                     flash("Evento salvo.")
                     return redirect(url_for("admin.eventos"))
                 flash("Não foi possível salvar o evento.")
     return render_template(
         "admin/eventos.html",
-        itens=Evento.query.order_by(Evento.data_evento.desc()).all(),
+        itens=consulta.order_by(Evento.data_evento.desc()).all(),
         item=item,
         subsedes=_subsedes(),
         valor_data_hora=_valor_data_hora,
+        so_empreendedores=_so_empreendedores(),
     )
 
 
 @bp.post("/eventos/<int:item_id>/excluir")
 def excluir_evento(item_id):
     item = db.session.get(Evento, item_id)
-    if item is None:
+    if item is None or (_so_empreendedores() and item.categoria != "empreendedores"):
         abort(404)
     db.session.delete(item)
     db.session.commit()
@@ -512,8 +593,18 @@ def _salvar_congregado(item: Congregado | None):
     item.nome = nome
     item.email = email
     item.whatsapp = whatsapp
+    item.whatsapp_e164 = numero_whatsapp(whatsapp) or ""
     item.subsede_id = _inteiro("subsede_id")
     item.recebe_noticias = _marcado("recebe_noticias")
+    if item.recebe_noticias:
+        if item.opt_in_status != "confirmado":
+            item.opt_in_status = "confirmado"
+            item.opt_in_origem = item.opt_in_origem or "painel"
+            item.consentimento_em = item.consentimento_em or datetime.now(timezone.utc)
+        if item.status_envio == "opt_out":
+            item.status_envio = "nunca_enviado"
+    else:
+        aplicar_opt_out(item)
     if not _gravar():
         flash("Já existe um congregado com este e-mail.")
         return None
@@ -527,9 +618,10 @@ def congregados():
         return redirect(url_for("admin.congregados"))
     return render_template(
         "admin/congregados.html",
-        itens=Congregado.query.order_by(Congregado.nome.asc()).all(),
+        itens=Congregado.query.order_by(Congregado.anonimizado.asc(), Congregado.nome.asc()).all(),
         subsedes=_subsedes(),
         item=None,
+        pedidos=SolicitacaoLgpd.query.order_by(SolicitacaoLgpd.criado_em.desc()).limit(20).all(),
     )
 
 
@@ -543,9 +635,10 @@ def congregado(item_id):
         return redirect(url_for("admin.congregados"))
     return render_template(
         "admin/congregados.html",
-        itens=Congregado.query.order_by(Congregado.nome.asc()).all(),
+        itens=Congregado.query.order_by(Congregado.anonimizado.asc(), Congregado.nome.asc()).all(),
         subsedes=_subsedes(),
         item=item,
+        pedidos=SolicitacaoLgpd.query.order_by(SolicitacaoLgpd.criado_em.desc()).limit(20).all(),
     )
 
 
@@ -553,15 +646,34 @@ def congregado(item_id):
 def congregados_csv():
     buffer = io.StringIO()
     escritor = csv.writer(buffer)
-    escritor.writerow(["nome", "email", "whatsapp", "subsede", "recebe_noticias", "data_cadastro"])
+    escritor.writerow(
+        [
+            "nome",
+            "email",
+            "whatsapp",
+            "whatsapp_e164",
+            "subsede",
+            "recebe_noticias",
+            "opt_in_status",
+            "consentimento_em",
+            "status_envio",
+            "anonimizado",
+            "data_cadastro",
+        ]
+    )
     for pessoa in Congregado.query.order_by(Congregado.nome.asc()).all():
         escritor.writerow(
             [
                 pessoa.nome,
                 pessoa.email,
                 pessoa.whatsapp,
+                pessoa.numero_internacional,
                 pessoa.subsede.nome if pessoa.subsede else "",
                 "sim" if pessoa.recebe_noticias else "não",
+                pessoa.opt_in_status,
+                formatar_data_hora_br(pessoa.consentimento_em) if pessoa.consentimento_em else "",
+                pessoa.status_envio,
+                "sim" if pessoa.anonimizado else "não",
                 formatar_data_hora_br(pessoa.data_cadastro),
             ]
         )
@@ -601,7 +713,7 @@ def configuracoes():
 
 
 def _destinatarios():
-    consulta = Congregado.query.filter_by(recebe_noticias=True)
+    consulta = Congregado.query.filter_by(recebe_noticias=True, anonimizado=False)
     subsede_id = _inteiro("subsede_id") if request.method == "POST" else _inteiro_query("subsede_id")
     if subsede_id:
         consulta = consulta.filter_by(subsede_id=subsede_id)
@@ -616,10 +728,13 @@ def _inteiro_query(nome: str):
 @bp.route("/comunicados", methods=["GET", "POST"])
 def comunicados():
     pessoas, subsede_id = _destinatarios() if request.method == "POST" else (
-        Congregado.query.filter_by(recebe_noticias=True).order_by(Congregado.nome.asc()).all(),
+        Congregado.query.filter_by(recebe_noticias=True, anonimizado=False).order_by(Congregado.nome.asc()).all(),
         None,
     )
     if request.method == "POST":
+        if not _admin_atual().pode("enviar_comunicados"):
+            flash("Seu acesso prepara a divulgação, mas não envia o e-mail geral.")
+            return redirect(url_for("admin.comunicados"))
         assunto = _texto("assunto")
         mensagem = _texto("mensagem")
         if len(assunto) < 2 or len(mensagem) < 2:
@@ -665,6 +780,18 @@ def comunicados():
         links=links,
         subsedes=_subsedes(),
         historico=Comunicado.query.order_by(Comunicado.enviado_em.desc()).limit(20).all(),
+        elegiveis_meta=[
+            pessoa
+            for pessoa in Congregado.query.filter_by(
+                recebe_noticias=True,
+                anonimizado=False,
+                opt_in_status="confirmado",
+            ).order_by(Congregado.nome.asc())
+            if pessoa.numero_internacional
+        ],
+        meta_configurada=bool(
+            current_app.config.get("WHATSAPP_TOKEN") and current_app.config.get("WHATSAPP_PHONE_NUMBER_ID")
+        ),
     )
 
 
@@ -674,7 +801,7 @@ def preparar_whatsapp():
     if len(mensagem) < 2:
         flash("Escreva a mensagem do WhatsApp.")
         return redirect(url_for("admin.comunicados"))
-    pessoas = Congregado.query.filter_by(recebe_noticias=True).order_by(Congregado.nome.asc()).all()
+    pessoas = Congregado.query.filter_by(recebe_noticias=True, anonimizado=False).order_by(Congregado.nome.asc()).all()
     links = [pessoa for pessoa in pessoas if link_wa_me(pessoa.whatsapp, mensagem, pessoa.nome)]
     admin = _admin_atual()
     db.session.add(
@@ -690,3 +817,81 @@ def preparar_whatsapp():
     db.session.commit()
     flash("Lista pronta. O site não envia o WhatsApp sozinho: abra cada conversa.")
     return redirect(url_for("admin.comunicados", mensagem=mensagem))
+
+
+def _codigos_marcados() -> list[str]:
+    return [codigo for codigo in request.form.getlist("permissao") if codigo in CODIGOS]
+
+
+def _gravar_permissoes(item: Administrador, codigos: list[str]) -> None:
+    item.permissoes.clear()
+    for codigo in codigos:
+        item.permissoes.append(AdministradorPermissao(codigo=codigo))
+
+
+@bp.route("/equipe", methods=["GET", "POST"])
+@bp.route("/equipe/<int:item_id>", methods=["GET", "POST"])
+def equipe(item_id=None):
+    item = db.session.get(Administrador, item_id) if item_id else None
+    if item_id and item is None:
+        abort(404)
+    if request.method == "POST":
+        nome = _texto("nome")
+        email = normalizar_email(_texto("email"))
+        ministerio = _texto("ministerio")
+        senha = request.form.get("senha") or ""
+        quer_super = _marcado("eh_super_admin")
+        quer_ativo = _marcado("ativo")
+        if erro_nome(nome) or erro_email(email):
+            flash(erro_nome(nome) or erro_email(email))
+        elif item is not None and _ultimo_super(item) and (not quer_super or not quer_ativo):
+            flash("O último administrador master precisa continuar ativo.")
+        else:
+            if item is None or senha:
+                erro_senha = validar_senha_nova(senha)
+            else:
+                erro_senha = ""
+            if erro_senha:
+                flash(erro_senha)
+            else:
+                if item is None:
+                    item = Administrador(nome=nome, email=email)
+                    db.session.add(item)
+                item.nome = nome
+                item.email = email
+                item.ministerio = ministerio
+                item.eh_super_admin = quer_super
+                item.ativo = quer_ativo if item.id != _admin_atual().id else True
+                if senha:
+                    item.senha_hash = hash_senha(senha)
+                db.session.flush()
+                _gravar_permissoes(item, _codigos_marcados())
+                if _gravar():
+                    flash("Acesso salvo.")
+                    return redirect(url_for("admin.equipe"))
+                flash("Já existe um acesso com este e-mail.")
+    return render_template(
+        "admin/equipe.html",
+        itens=Administrador.query.order_by(Administrador.nome.asc()).all(),
+        item=item,
+        catalogo=CATALOGO,
+        marcadas=set(_codigos_marcados()) if request.method == "POST" else (set() if item is None else item.codigos()),
+    )
+
+
+@bp.post("/equipe/<int:item_id>/excluir")
+def excluir_equipe(item_id):
+    item = db.session.get(Administrador, item_id)
+    if item is None:
+        abort(404)
+    if _ultimo_super(item):
+        flash("O último administrador master não pode ser excluído.")
+        return redirect(url_for("admin.equipe"))
+    era_eu = _admin_atual().id == item.id
+    db.session.delete(item)
+    db.session.commit()
+    flash("Acesso excluído.")
+    if era_eu:
+        session.clear()
+        return redirect(url_for("admin.entrar"))
+    return redirect(url_for("admin.equipe"))

@@ -3,7 +3,7 @@
 import re
 
 from flask_wtf import FlaskForm
-from wtforms import BooleanField, SelectField, StringField
+from wtforms import BooleanField, SelectField, StringField, TextAreaField
 from wtforms.validators import DataRequired, ValidationError
 
 _EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -12,7 +12,7 @@ _EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 def erro_nome(nome: str | None) -> str:
     texto = (nome or "").strip()
     if len(texto) < 2:
-        return "Informe o nome."
+        return "Informe o nome completo."
     return ""
 
 
@@ -58,7 +58,7 @@ def _validar_whatsapp(form, field):
 class FormularioCongregado(FlaskForm):
     """Cadastro de congregado. O campo empresa é o honeypot contra robôs."""
 
-    nome = StringField("Nome", validators=[_validar_nome])
+    nome = StringField("Nome completo", validators=[_validar_nome])
     email = StringField("E-mail", validators=[_validar_email])
     whatsapp = StringField("WhatsApp", validators=[_validar_whatsapp])
     subsede_id = SelectField(
@@ -67,7 +67,7 @@ class FormularioCongregado(FlaskForm):
         validators=[DataRequired(message="Escolha a subsede.")],
     )
     consentimento = BooleanField(
-        "Autorizo o uso dos meus dados para receber comunicados da igreja.",
+        "Autorizo o recebimento de mensagens e informativos da igreja por e-mail e WhatsApp.",
         validators=[DataRequired(message="O consentimento é obrigatório para concluir o cadastro.")],
     )
     empresa = StringField("Empresa")
@@ -75,3 +75,12 @@ class FormularioCongregado(FlaskForm):
     def __init__(self, subsedes, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.subsede_id.choices = [(item.id, item.nome) for item in subsedes]
+
+
+class FormularioRemocao(FlaskForm):
+    """Pedido de exclusão. O campo empresa é o honeypot contra robôs."""
+
+    email = StringField("E-mail cadastrado", validators=[_validar_email])
+    whatsapp = StringField("WhatsApp cadastrado", validators=[_validar_whatsapp])
+    motivo = TextAreaField("Motivo da saída (opcional)")
+    empresa = StringField("Empresa")

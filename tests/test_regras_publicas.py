@@ -1,15 +1,8 @@
-"""Regras puras da Parte 2: feriados, valores, WhatsApp, Bíblia e Brevo."""
+"""Regras puras da Parte 2: feriados, valores, WhatsApp e Brevo."""
 
 import json
 from datetime import date
 
-from app.services.biblia import (
-    LIVROS,
-    buscar_capitulo,
-    capitulo_vizinho,
-    interpretar_resposta,
-    limpar_cache,
-)
 from app.services.brevo import corpo_do_email, enviar_lotes, fatiar_lotes, montar_versoes
 from app.services.brevo import ResultadoEnvio
 from app.services.feriados import calendario_do_ano, data_da_pascoa, feriados_nacionais
@@ -79,42 +72,6 @@ def test_link_de_whatsapp_troca_o_primeiro_nome():
     assert "Maria" in link
     assert "{nome}" not in link
     assert link_wa_me("123", "oi") is None
-
-
-def test_sao_66_livros_e_a_navegacao_muda_de_livro():
-    assert len(LIVROS) == 66
-    assert capitulo_vizinho("genesis", 1, -1) is None
-    assert capitulo_vizinho("genesis", 50, 1) == ("exodo", 1)
-    assert capitulo_vizinho("apocalipse", 22, 1) is None
-
-
-def test_biblia_usa_cache_e_nao_chama_a_rede_de_novo():
-    limpar_cache()
-    chamadas = []
-
-    def cliente(url):
-        chamadas.append(url)
-        return json.dumps({"verses": [{"verse": 1, "text": "No princípio"}]})
-
-    primeiro = buscar_capitulo("genesis", 1, cliente=cliente)
-    segundo = buscar_capitulo("genesis", 1, cliente=cliente)
-    assert primeiro.ok and segundo.ok
-    assert primeiro.versiculos[0] == (1, "No princípio")
-    assert len(chamadas) == 1
-    assert "almeida" in chamadas[0]
-    limpar_cache()
-
-
-def test_biblia_avisa_quando_a_api_falha():
-    limpar_cache()
-
-    def cliente(url):
-        raise TimeoutError("sem rede")
-
-    resultado = buscar_capitulo("joao", 3, cliente=cliente)
-    assert not resultado.ok
-    assert resultado.link_externo.startswith("https://www.bibliaonline.com.br")
-    assert interpretar_resposta('{"text": "só o bloco"}') == ((1, "só o bloco"),)
 
 
 def test_gif_e_foto_animada_continuam_animados():

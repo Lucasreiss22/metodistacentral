@@ -29,8 +29,9 @@
       <label class="mt-4 block text-sm">Título<input class="{{ campo }}" name="titulo" value="{{ request.form.get('titulo', item.titulo if item else '') }}" required></label>
       <label class="mt-4 block text-sm">Tipo
         <select class="{{ campo }}" name="tipo">
-          {% for tipo in ["banner", "foto", "video", "aviso"] %}
-            <option value="{{ tipo }}" {% if request.form.get('tipo', item.tipo if item else 'banner') == tipo %}selected{% endif %}>{{ tipo }}</option>
+          {% set escolhido = request.form.get('tipo', item.tipo if item else tipos[0]) %}
+          {% for tipo in tipos %}
+            <option value="{{ tipo }}" {% if escolhido == tipo %}selected{% endif %}>{{ tipo }}</option>
           {% endfor %}
         </select>
       </label>

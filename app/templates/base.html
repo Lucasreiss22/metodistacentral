@@ -49,7 +49,6 @@
           <a class="hover:text-vinho" href="{{ url_for('publico.subsedes') }}">Subsedes</a>
           <a class="hover:text-vinho" href="{{ url_for('publico.campanhas') }}">Campanhas</a>
           <a class="hover:text-vinho" href="{{ url_for('publico.calendario') }}">Calendário</a>
-          <a class="hover:text-vinho" href="{{ url_for('publico.biblia') }}">Bíblia online</a>
           <a class="btn-acao bg-vinho text-white" href="{{ url_for('publico.congregado') }}">Seja um congregado</a>
         </nav>
       </div>
@@ -58,7 +57,6 @@
           <a href="{{ url_for('publico.subsedes') }}">Subsedes</a>
           <a href="{{ url_for('publico.campanhas') }}">Campanhas</a>
           <a href="{{ url_for('publico.calendario') }}">Calendário</a>
-          <a href="{{ url_for('publico.biblia') }}">Bíblia online</a>
           <a class="btn-acao bg-vinho text-white" href="{{ url_for('publico.congregado') }}">Seja um congregado</a>
         </div>
       </nav>
@@ -84,6 +82,7 @@
         {% if configuracao.whatsapp %}
           <a href="{{ link_wa_me(configuracao.whatsapp, 'Olá, paz.') }}">WhatsApp</a>
         {% endif %}
+        <a href="{{ url_for('publico.lgpd') }}">Descadastrar / Remoção de Dados (LGPD)</a>
         <a href="{{ url_for('admin.entrar') }}">Entrar no painel</a>
       </div>
     </div>

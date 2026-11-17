@@ -10,17 +10,19 @@
     <section class="overflow-x-auto rounded-3xl bg-white shadow">
       <table class="w-full text-left text-sm">
         <thead class="border-b border-stone-200">
-          <tr><th class="p-3">Nome</th><th class="p-3">E-mail</th><th class="p-3">Notícias</th></tr>
+          <tr><th class="p-3">Nome</th><th class="p-3">E-mail</th><th class="p-3">WhatsApp</th><th class="p-3">Opt-in</th><th class="p-3">Envio</th></tr>
         </thead>
         <tbody>
           {% for atual in itens %}
             <tr class="border-b border-stone-100">
               <td class="p-3"><a class="text-vinho" href="{{ url_for('admin.congregado', item_id=atual.id) }}">{{ atual.nome }}</a></td>
               <td class="p-3">{{ atual.email }}</td>
-              <td class="p-3">{{ "sim" if atual.recebe_noticias else "não" }}</td>
+              <td class="p-3">{{ atual.numero_internacional or atual.whatsapp }}</td>
+              <td class="p-3">{{ atual.opt_in_status }}</td>
+              <td class="p-3">{{ "removido" if atual.anonimizado else atual.status_envio }}</td>
             </tr>
           {% else %}
-            <tr><td class="p-3 text-stone-600" colspan="3">Nenhum congregado.</td></tr>
+            <tr><td class="p-3 text-stone-600" colspan="5">Nenhum congregado.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -30,7 +32,10 @@
       <h2 class="font-serif text-2xl">{{ "Editar" if item else "Novo congregado" }}</h2>
       <label class="mt-4 block text-sm">Nome<input class="{{ campo }}" name="nome" value="{{ request.form.get('nome', item.nome if item else '') }}" required></label>
       <label class="mt-4 block text-sm">E-mail<input class="{{ campo }}" name="email" type="email" value="{{ request.form.get('email', item.email if item else '') }}" required></label>
-      <label class="mt-4 block text-sm">WhatsApp<input class="{{ campo }}" name="whatsapp" value="{{ request.form.get('whatsapp', item.whatsapp if item else '') }}" required></label>
+      <label class="mt-4 block text-sm">WhatsApp<input class="{{ campo }}" name="whatsapp" data-whatsapp="1" inputmode="tel" placeholder="(21) 99999-9999" value="{{ request.form.get('whatsapp', item.whatsapp if item else '') }}" required></label>
+      {% if item and item.consentimento_em %}
+        <p class="mt-3 text-sm text-stone-600">Consentimento em {{ formatar_data_hora_br(item.consentimento_em) }} · origem {{ item.opt_in_origem or "não informada" }}</p>
+      {% endif %}
       <label class="mt-4 block text-sm">Subsede
         <select class="{{ campo }}" name="subsede_id">
           <option value="">—</option>
@@ -44,4 +49,13 @@
       <button class="btn-acao mt-6 bg-vinho text-white" type="submit">Salvar</button>
     </form>
   </div>
+  <section class="mt-8 rounded-[1.5rem] bg-white p-6 shadow">
+    <h2 class="font-serif text-2xl">Pedidos de remoção (LGPD)</h2>
+    <p class="mt-2 text-sm text-stone-600">O e-mail e o WhatsApp do pedido não ficam aqui. Só a data, o motivo e se o cadastro foi encontrado.</p>
+    {% for pedido in pedidos %}
+      <p class="mt-3 text-sm">{{ formatar_data_hora_br(pedido.criado_em) }} — {{ pedido.resultado }}{% if pedido.motivo %} — {{ pedido.motivo }}{% endif %}</p>
+    {% else %}
+      <p class="mt-3 text-sm text-stone-600">Nenhum pedido.</p>
+    {% endfor %}
+  </section>
 {% endblock %}

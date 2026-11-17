@@ -1,14 +1,12 @@
-"""Rotas públicas com SQLite e com Brevo/Bíblia simulados."""
+"""Rotas públicas com SQLite e com o Brevo simulado."""
 
-import json
 from datetime import datetime, timezone
 
 import pytest
 
 from app import create_app
 from app.extensions import db
-from app.models import Campanha, Congregado, Evento, FeriadoLocal, Subsede
-from app.services.biblia import limpar_cache
+from app.models import Campanha, Congregado, Evento, FeriadoLocal, SolicitacaoLgpd, Subsede
 from app.services.brevo import ResultadoEnvio
 
 
@@ -33,17 +31,12 @@ def enviados():
 def app(enviados):
     aplicacao = create_app(ConfigRotas)
     aplicacao.config["CLIENTE_BREVO"] = lambda corpo: enviados.append(corpo) or ResultadoEnvio(True)
-    aplicacao.config["CLIENTE_BIBLIA"] = lambda url: json.dumps(
-        {"verses": [{"verse": 1, "text": "No princípio Deus criou"}]}
-    )
     with aplicacao.app_context():
         db.create_all()
-        limpar_cache()
         yield aplicacao
         db.session.rollback()
         db.session.remove()
         db.drop_all()
-        limpar_cache()
 
 
 @pytest.fixture
@@ -63,7 +56,8 @@ def test_pagina_inicial_responde(cliente):
     assert resposta.status_code == 200
     texto = resposta.get_data(as_text=True)
     assert "Seja um congregado" in texto
-    assert "Bíblia online" in texto
+    assert "Bíblia online" not in texto
+    assert "Remoção de Dados" in texto
     assert "btn-acao" in texto
     assert "cdn.tailwindcss.com" in texto
 
@@ -89,6 +83,9 @@ def test_cadastro_grava_e_chama_o_brevo(cliente, app, enviados):
         pessoa = Congregado.query.one()
         assert pessoa.email == "ana@igreja.com"
         assert pessoa.recebe_noticias is True
+        assert pessoa.whatsapp_e164 == "5521999998888"
+        assert pessoa.opt_in_status == "confirmado"
+        assert pessoa.consentimento_em is not None
         assert pessoa.subsede_id == sede_id
         token = pessoa.token_descadastro
     assert enviados[0]["to"][0]["email"] == "ana@igreja.com"
@@ -227,7 +224,65 @@ def test_calendario_junta_evento_feriado_nacional_e_local(cliente, app):
     assert "ponto_facultativo" in tipos
 
 
-def test_campanha_e_biblia(cliente, app):
+def test_lgpd_remove_os_dados_quando_email_e_whatsapp_conferem(cliente, app):
+    with app.app_context():
+        db.session.add(
+            Congregado(
+                nome="Ana Silva",
+                email="ana@igreja.com",
+                whatsapp="(21) 99999-8888",
+                whatsapp_e164="5521999998888",
+                recebe_noticias=True,
+            )
+        )
+        db.session.commit()
+    pagina = cliente.get("/lgpd")
+    assert pagina.status_code == 200
+    assert "Descadastrar / Remoção de Dados (LGPD)" in pagina.get_data(as_text=True)
+    resposta = cliente.post(
+        "/lgpd",
+        data={"email": "Ana@Igreja.com", "whatsapp": "21999998888", "motivo": "Mudei de cidade"},
+    )
+    assert "Remoção concluída" in resposta.get_data(as_text=True)
+    with app.app_context():
+        pessoa = Congregado.query.one()
+        assert pessoa.anonimizado is True
+        assert pessoa.recebe_noticias is False
+        assert pessoa.opt_in_status == "revogado"
+        assert pessoa.whatsapp == ""
+        assert "ana@igreja.com" not in pessoa.email
+        assert pessoa.nome == "Cadastro removido"
+        pedido = SolicitacaoLgpd.query.one()
+        assert pedido.resultado == "removido"
+        assert "ana@igreja.com" not in pedido.email_hash
+        assert pedido.motivo == "Mudei de cidade"
+    de_novo = cliente.post(
+        "/lgpd",
+        data={"email": "ana@igreja.com", "whatsapp": "21999998888", "motivo": "de novo"},
+    )
+    assert "Não encontramos" in de_novo.get_data(as_text=True)
+
+
+def test_lgpd_nao_apaga_se_o_whatsapp_nao_confere(cliente, app):
+    with app.app_context():
+        db.session.add(Congregado(nome="Ana", email="ana@igreja.com", whatsapp="21999998888", whatsapp_e164="5521999998888"))
+        db.session.commit()
+    resposta = cliente.post(
+        "/lgpd",
+        data={"email": "ana@igreja.com", "whatsapp": "21911111111"},
+    )
+    assert "Não encontramos" in resposta.get_data(as_text=True)
+    with app.app_context():
+        assert Congregado.query.one().anonimizado is False
+        assert Congregado.query.one().email == "ana@igreja.com"
+
+
+def test_biblia_foi_removida(cliente):
+    assert cliente.get("/biblia").status_code == 404
+    assert cliente.get("/biblia/genesis/1").status_code == 404
+
+
+def test_campanha(cliente, app):
     with app.app_context():
         db.session.add(
             Campanha(titulo="Cestas básicas", descricao="Alimentos", meta=200, arrecadado=50, unidade="cestas")
@@ -240,12 +295,3 @@ def test_campanha_e_biblia(cliente, app):
     detalhe = cliente.get(f"/campanhas/{campanha_id}")
     assert detalhe.status_code == 200
     assert cliente.get("/campanhas/999").status_code == 404
-
-    biblia = cliente.get("/biblia/genesis/1")
-    texto = biblia.get_data(as_text=True)
-    assert biblia.status_code == 200
-    assert "No princípio Deus criou" in texto
-
-    app.config["CLIENTE_BIBLIA"] = lambda url: (_ for _ in ()).throw(TimeoutError())
-    falha = cliente.get("/biblia/joao/3")
-    assert "bibliaonline.com.br" in falha.get_data(as_text=True)

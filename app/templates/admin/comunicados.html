@@ -5,6 +5,7 @@
   <h1 class="font-serif text-4xl">Comunicados</h1>
   <p class="mt-2 max-w-2xl text-sm text-stone-600">O e-mail sai pelo Brevo, em lotes, e cada pessoa recebe o próprio link de descadastro. O WhatsApp só abre a conversa; o site não envia a mensagem sozinho.</p>
   <div class="mt-6 grid gap-6 lg:grid-cols-2">
+    {% if pode('enviar_comunicados') %}
     <form class="rounded-[1.5rem] bg-white p-6 shadow" method="post">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <h2 class="font-serif text-2xl">E-mail</h2>
@@ -21,6 +22,12 @@
       <p class="mt-3 text-sm text-stone-600">{{ pessoas|length }} pessoa(s) com notícias ativas nesta lista.</p>
       <button class="btn-acao mt-4 bg-vinho text-white" type="submit">Enviar e-mail</button>
     </form>
+    {% else %}
+      <section class="rounded-[1.5rem] bg-white p-6 shadow">
+        <h2 class="font-serif text-2xl">E-mail</h2>
+        <p class="mt-3 text-sm text-stone-600">Seu acesso prepara a divulgação no WhatsApp. O e-mail geral fica com quem tem a permissão de enviar informativos.</p>
+      </section>
+    {% endif %}
     <form class="rounded-[1.5rem] bg-white p-6 shadow" method="post" action="{{ url_for('admin.preparar_whatsapp') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <h2 class="font-serif text-2xl">WhatsApp</h2>
@@ -45,5 +52,17 @@
     {% else %}
       <p class="mt-3 text-stone-600">Nenhum comunicado.</p>
     {% endfor %}
+  </section>
+  <section class="mt-8 rounded-[1.5rem] bg-white p-6 shadow">
+    <h2 class="font-serif text-2xl">API oficial da Meta</h2>
+    <p class="mt-2 max-w-2xl text-sm text-stone-600">Estes contatos já têm opt-in confirmado e número no formato internacional (55 + DDD + número). O disparo automático espera as variáveis WHATSAPP_TOKEN e WHATSAPP_PHONE_NUMBER_ID. Enquanto elas estiverem vazias, nada é enviado à Meta.</p>
+    <p class="mt-3 text-sm">{{ elegiveis_meta|length }} contato(s) prontos.{% if meta_configurada %} As chaves da API estão preenchidas; o envio automático ainda não está ligado.{% else %} A API ainda não está configurada.{% endif %}</p>
+    <ul class="mt-4 space-y-2 text-sm">
+      {% for pessoa in elegiveis_meta %}
+        <li>{{ pessoa.nome }} — {{ pessoa.numero_internacional }} — {{ pessoa.status_envio }}</li>
+      {% else %}
+        <li class="text-stone-600">Nenhum contato com opt-in confirmado.</li>
+      {% endfor %}
+    </ul>
   </section>
 {% endblock %}
