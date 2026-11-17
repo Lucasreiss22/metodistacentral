@@ -4,7 +4,7 @@ O site continua em Flask, com o banco descrito em `supabase/schema.sql`. A Bíbl
 
 ## 1. Banco
 
-No SQL Editor do Supabase, rode de novo o arquivo `supabase/schema.sql`.
+No SQL Editor do Supabase, rode de novo o arquivo `supabase/schema.sql`. O processo do site também aplica essas mesmas colunas ao subir, quando a `DATABASE_URL` aponta para o Postgres. Assim um deploy novo cobre o banco que já existia, sem esperar o SQL Editor.
 
 O script pode ser repetido. Ele não apaga tabela. Em um banco que já existia, ele acrescenta:
 
@@ -31,7 +31,7 @@ E-mail: `admin@metodistacentral.local`
 
 Senha: `Central@2026`
 
-Esses são os valores usados quando `ADMIN_EMAIL` e `ADMIN_SENHA` estão vazios. Rode:
+Esses são os valores usados quando `ADMIN_EMAIL` e `ADMIN_SENHA` estão vazios. Na subida, se ainda não existir senha para esse e-mail, o processo cria o master sozinho. Também dá para rodar:
 
 ```
 flask criar-super-admin

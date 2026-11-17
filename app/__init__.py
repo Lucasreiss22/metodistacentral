@@ -53,6 +53,9 @@ def create_app(classe_config=None):
     aplicacao.register_blueprint(publico_bp)
     aplicacao.register_blueprint(admin_bp)
     registrar_comandos(aplicacao)
+    from app.esquema import alinhar_banco
+
+    alinhar_banco(aplicacao)
     return aplicacao
 
 
@@ -126,44 +129,14 @@ def registrar_comandos(aplicacao: Flask) -> None:
     @aplicacao.cli.command("criar-super-admin")
     def criar_super_admin():
         """Cria ou atualiza o administrador master. A senha é gravada como hash."""
-        from sqlalchemy import func
+        from app.esquema import garantir_super_admin
 
-        from app.auth import hash_senha, validar_senha_nova
-        from app.models import Administrador
-        from app.utils import normalizar_email
-
-        email = normalizar_email(aplicacao.config.get("ADMIN_EMAIL") or EMAIL_ADMIN_INICIAL)
-        senha_env = aplicacao.config.get("ADMIN_SENHA") or ""
         with aplicacao.app_context():
-            admin = Administrador.query.filter(func.lower(Administrador.email) == email).one_or_none()
-            if admin is None:
-                admin = Administrador(email=email, nome="Administrador", ativo=True, ministerio="Administração")
-                db.session.add(admin)
-            senha = senha_env
-            if admin.senha_hash and not senha_env:
-                admin.ativo = True
-                admin.eh_super_admin = True
-                db.session.commit()
-                click.echo(f"Super administrador mantido: {email}")
-                click.echo("A senha já existia e não foi trocada. Para trocar, preencha ADMIN_SENHA e rode de novo.")
-                return
-            if not senha:
-                senha = SENHA_ADMIN_INICIAL
-            erro = validar_senha_nova(senha)
-            if erro:
-                click.echo(erro)
-                raise click.exceptions.Exit(1)
-            admin.nome = admin.nome or "Administrador"
-            admin.ministerio = admin.ministerio or "Administração"
-            admin.ativo = True
-            admin.eh_super_admin = True
-            admin.senha_hash = hash_senha(senha)
-            db.session.commit()
-        click.echo(f"Super administrador pronto: {email}")
-        if senha_env:
-            click.echo("Senha definida pela variável ADMIN_SENHA.")
-        else:
-            click.echo("Senha inicial: a documentada em README_ATUALIZACOES.md. Troque no painel depois do primeiro acesso.")
+            mensagens, codigo = garantir_super_admin(aplicacao)
+        for linha in mensagens:
+            click.echo(linha)
+        if codigo:
+            raise click.exceptions.Exit(codigo)
 
     @aplicacao.cli.command("preparar-congregados")
     def preparar_congregados():

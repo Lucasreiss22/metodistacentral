@@ -82,6 +82,36 @@ def _config_de_teste(**extras):
     return ConfigDoTeste
 
 
+def test_alinhamento_cobre_as_colunas_que_o_site_consulta():
+    from app.esquema import COMANDOS
+
+    sql = " ".join(comando.lower() for comando in COMANDOS)
+    assert "eventos add column if not exists categoria" in sql
+    assert "administradores add column if not exists senha_hash" in sql
+    assert "administrador_permissoes" in sql
+    assert "solicitacoes_lgpd" in sql
+
+
+def test_criar_super_admin_grava_hash_e_nao_repete_a_senha(app):
+    from app.models import Administrador
+
+    runner = app.test_cli_runner()
+    primeiro = runner.invoke(args=["criar-super-admin"])
+    assert primeiro.exit_code == 0
+    assert "admin@metodistacentral.local" in primeiro.output
+    admin = Administrador.query.filter_by(email="admin@metodistacentral.local").one()
+    hash_inicial = admin.senha_hash
+    assert admin.eh_super_admin is True
+    assert hash_inicial
+    assert "Central@2026" not in hash_inicial
+
+    segundo = runner.invoke(args=["criar-super-admin"])
+    assert segundo.exit_code == 0
+    assert "não foi trocada" in segundo.output
+    db.session.refresh(admin)
+    assert admin.senha_hash == hash_inicial
+
+
 def test_comando_avisa_url_vazia_sem_tentar_conexao():
     aplicacao = create_app(_config_de_teste())
     resultado = aplicacao.test_cli_runner().invoke(args=["testar-conexao"])
