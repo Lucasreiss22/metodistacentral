@@ -53,8 +53,14 @@ def anonimizar(pessoa: Congregado, motivo: str) -> None:
     pessoa.email = f"removido-{pessoa.id}@anonimo.invalid"
 
 
-def processar_exclusao(email: str, whatsapp: str, motivo: str) -> str:
-    """Localiza pelo e-mail e pelo WhatsApp juntos. Devolve removido ou nao_encontrado."""
+def processar_pedido(email: str, whatsapp: str, motivo: str, tipo: str = "remocao") -> str:
+    """Localiza pelo e-mail e pelo WhatsApp juntos.
+
+    Remoção apaga o dado pessoal. Alteração só registra o pedido para o painel editar.
+    Devolve removido, pendente ou nao_encontrado.
+    """
+    if tipo not in ("remocao", "alteracao"):
+        tipo = "remocao"
     email_norm = normalizar_email(email)
     numero = numero_whatsapp(whatsapp) or ""
     pessoa = Congregado.query.filter(
@@ -65,12 +71,19 @@ def processar_exclusao(email: str, whatsapp: str, motivo: str) -> str:
     if pessoa is not None:
         gravado = pessoa.whatsapp_e164 or numero_whatsapp(pessoa.whatsapp) or ""
     if pessoa is not None and numero and gravado == numero:
-        anonimizar(pessoa, motivo)
-        resultado = "removido"
+        if tipo == "alteracao":
+            resultado = "pendente"
+        else:
+            anonimizar(pessoa, motivo)
+            resultado = "removido"
+        congregado_id = pessoa.id
     else:
         resultado = "nao_encontrado"
+        congregado_id = None
     db.session.add(
         SolicitacaoLgpd(
+            tipo=tipo,
+            congregado_id=congregado_id,
             email_hash=hash_identificador(email_norm),
             whatsapp_hash=hash_identificador(numero),
             motivo=(motivo or "").strip()[:500],
@@ -79,3 +92,8 @@ def processar_exclusao(email: str, whatsapp: str, motivo: str) -> str:
     )
     db.session.commit()
     return resultado
+
+
+def processar_exclusao(email: str, whatsapp: str, motivo: str) -> str:
+    """Atalho do pedido de remoção."""
+    return processar_pedido(email, whatsapp, motivo, "remocao")

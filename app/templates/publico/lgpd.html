@@ -1,23 +1,35 @@
 {% extends "base.html" %}
 {% block titulo %}Descadastrar / Remoção de Dados (LGPD) — {{ configuracao.nome_igreja }}{% endblock %}
 {% block conteudo %}
-  {% if confirmado %}
+  {% if confirmado == "removido" %}
     <article class="max-w-xl rounded-[1.5rem] bg-white p-8 shadow">
       <h1 class="font-serif text-4xl">Remoção concluída</h1>
       <p class="mt-3">Seus dados pessoais foram apagados deste cadastro. Você não receberá mais mensagens da igreja por e-mail nem por WhatsApp.</p>
       <p class="mt-4 text-sm"><a class="text-vinho" href="{{ url_for('publico.inicio') }}">Voltar ao início</a></p>
     </article>
+  {% elif confirmado == "alteracao" %}
+    <article class="max-w-xl rounded-[1.5rem] bg-white p-8 shadow">
+      <h1 class="font-serif text-4xl">Pedido de alteração registrado</h1>
+      <p class="mt-3">A igreja recebeu o que você pediu para mudar. Seus dados continuam como estão até alguém da equipe atualizar o cadastro.</p>
+      <p class="mt-4 text-sm"><a class="text-vinho" href="{{ url_for('publico.inicio') }}">Voltar ao início</a></p>
+    </article>
   {% else %}
     {% set campo = "mt-1 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 outline-none transition focus:border-vinho focus:ring-2 focus:ring-vinho/20" %}
     <h1 class="font-serif text-4xl">Descadastrar / Remoção de Dados (LGPD)</h1>
-    <p class="mt-3 max-w-xl text-stone-600">Informe o mesmo e-mail e o mesmo WhatsApp do cadastro. Os dois precisam coincidir. O motivo é opcional.</p>
+    <p class="mt-3 max-w-xl text-stone-600">Informe o mesmo e-mail e o mesmo WhatsApp do cadastro. Os dois precisam coincidir. A remoção apaga os dados na hora. A alteração cadastral fica para a equipe editar no painel.</p>
     <form class="relative mt-6 max-w-xl rounded-[1.5rem] bg-white p-6 shadow" method="post">
       {{ formulario.hidden_tag() }}
       <div class="absolute -left-[10000px]" aria-hidden="true">
         {{ formulario.empresa.label }}
         {{ formulario.empresa() }}
       </div>
-      <p>
+      <fieldset>
+        <legend class="text-sm">{{ formulario.tipo.label.text }}</legend>
+        {% for opcao in formulario.tipo %}
+          <label class="mt-2 flex items-center gap-2 text-sm">{{ opcao }} {{ opcao.label.text }}</label>
+        {% endfor %}
+      </fieldset>
+      <p class="mt-4">
         {{ formulario.email.label(class_="text-sm") }}
         {{ formulario.email(class_=campo, type="email", autocomplete="email") }}
         {% for erro in formulario.email.errors %}<span class="mt-1 block text-sm text-vinho">{{ erro }}</span>{% endfor %}
@@ -30,8 +42,9 @@
       <p class="mt-4">
         {{ formulario.motivo.label(class_="text-sm") }}
         {{ formulario.motivo(class_=campo, rows="4") }}
+        {% for erro in formulario.motivo.errors %}<span class="mt-1 block text-sm text-vinho">{{ erro }}</span>{% endfor %}
       </p>
-      <button class="btn-acao mt-6 bg-vinho text-white" type="submit">Pedir a remoção</button>
+      <button class="btn-acao mt-6 bg-vinho text-white" type="submit">Enviar pedido</button>
     </form>
   {% endif %}
 {% endblock %}

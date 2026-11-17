@@ -82,6 +82,6 @@ O menu e as rotas usam a mesma lista. Um acesso sem a permissão não vê o bot�
 
 O formulário público continua em `/congregado`, sem login. O consentimento é obrigatório. O WhatsApp pede DDD + número e é gravado também como `55` + DDD + número.
 
-A página pública de exclusão fica no rodapé: **Descadastrar / Remoção de Dados (LGPD)**, no endereço `/lgpd`. O pedido pede o e-mail e o WhatsApp do cadastro, juntos, e um motivo opcional. Se os dois conferem, o nome, o e-mail e o telefone são apagados (o registro vira "Cadastro removido") e os envios param. O pedido guarda só o hash desses identificadores, a data e o motivo.
+A página pública fica no rodapé: **Descadastrar / Remoção de Dados ou alteração cadastral (LGPD)**, no endereço `/lgpd`. O pedido pede o e-mail e o WhatsApp do cadastro, juntos. Se os dois conferem, a remoção apaga nome, e-mail e telefone na hora (o registro vira "Cadastro removido"). A alteração cadastral não apaga nada: o painel mostra o pedido e o botão Editar abre o cadastro para a equipe corrigir nome, e-mail, WhatsApp e subsede. Ao salvar, o pedido pendente fica como alteração feita. O pedido guarda só o hash dos identificadores, a data e o texto.
 
 O link antigo do e-mail (`/descadastrar/<token>`) continua só interrompendo os envios, sem apagar o cadastro. Dessa tela dá para ir à remoção completa.

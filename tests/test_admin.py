@@ -7,7 +7,7 @@ import pytest
 from app import create_app
 from app.auth import hash_senha, senha_confere
 from app.extensions import db
-from app.models import Administrador, AdministradorPermissao, Congregado, Evento, Subsede
+from app.models import Administrador, AdministradorPermissao, Congregado, Evento, SolicitacaoLgpd, Subsede
 from app.services.brevo import ResultadoEnvio
 from app.services.mensagens import html_comunicado
 from app.services.storage import enviar_midia
@@ -267,6 +267,66 @@ def test_ministerio_so_ve_o_que_foi_marcado(cliente, app):
         follow_redirects=True,
     )
     assert "não envia o e-mail geral" in email.get_data(as_text=True)
+
+
+def test_editar_congregado_conclui_o_pedido_e_a_remocao_fica_embaixo(cliente, app):
+    with app.app_context():
+        _admin()
+        ativo = Congregado(
+            nome="Ana Silva",
+            email="ana@igreja.com",
+            whatsapp="21999998888",
+            whatsapp_e164="5521999998888",
+            recebe_noticias=True,
+        )
+        removido = Congregado(
+            nome="Cadastro removido",
+            email="removido-2@anonimo.invalid",
+            whatsapp="",
+            anonimizado=True,
+            motivo_exclusao="Mudei de cidade",
+        )
+        db.session.add_all([ativo, removido])
+        db.session.flush()
+        db.session.add(
+            SolicitacaoLgpd(
+                tipo="alteracao",
+                congregado_id=ativo.id,
+                email_hash="abc",
+                whatsapp_hash="def",
+                motivo="Corrigir o nome",
+                resultado="pendente",
+            )
+        )
+        db.session.commit()
+        ativo_id = ativo.id
+        removido_id = removido.id
+    _entrar(cliente)
+    pagina = cliente.get("/admin/congregados").get_data(as_text=True)
+    assert "Editar" in pagina
+    assert "Remoções feitas" in pagina
+    assert "removido-2@anonimo.invalid" in pagina
+    assert "Pedido de alteração cadastral" in pagina
+    assert "aguardando edição" in pagina
+    edicao = cliente.get(f"/admin/congregados/{ativo_id}")
+    assert "Editar congregado" in edicao.get_data(as_text=True)
+    assert "Corrigir o nome" in edicao.get_data(as_text=True)
+    assert cliente.get(f"/admin/congregados/{removido_id}").status_code == 404
+    salvo = cliente.post(
+        f"/admin/congregados/{ativo_id}",
+        data={
+            "nome": "Ana Lima",
+            "email": "ana@igreja.com",
+            "whatsapp": "21999998888",
+            "recebe_noticias": "on",
+        },
+        follow_redirects=True,
+    )
+    assert "Congregado salvo." in salvo.get_data(as_text=True)
+    assert "alteração feita" in salvo.get_data(as_text=True)
+    with app.app_context():
+        assert db.session.get(Congregado, ativo_id).nome == "Ana Lima"
+        assert SolicitacaoLgpd.query.filter_by(tipo="alteracao").one().resultado == "concluida"
 
 
 def test_html_do_comunicado_escapa_o_texto():

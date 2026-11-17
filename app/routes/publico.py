@@ -12,7 +12,7 @@ from app.extensions import db
 from app.formularios import FormularioCongregado, FormularioRemocao
 from app.models import Campanha, Congregado, Configuracao, Evento, FeriadoLocal, Informativo, Subsede
 from app.services.brevo import enviar_email
-from app.services.lgpd import aplicar_opt_in, aplicar_opt_out, processar_exclusao
+from app.services.lgpd import aplicar_opt_in, aplicar_opt_out, processar_pedido
 from app.services.feriados import CORES, LEGENDA, calendario_do_ano
 from app.services.mensagens import assunto_boas_vindas, link_de_descadastro, texto_boas_vindas
 from app.services.whatsapp import link_wa_me
@@ -311,13 +311,21 @@ def lgpd():
     formulario = FormularioRemocao()
     if formulario.validate_on_submit():
         if (formulario.empresa.data or "").strip():
-            return render_template("publico/lgpd.html", formulario=formulario, confirmado=True)
-        resultado = processar_exclusao(
-            formulario.email.data,
-            formulario.whatsapp.data,
-            formulario.motivo.data or "",
-        )
-        if resultado == "removido":
-            return render_template("publico/lgpd.html", formulario=formulario, confirmado=True)
-        formulario.email.errors.append("Não encontramos um cadastro com esse e-mail e esse WhatsApp.")
-    return render_template("publico/lgpd.html", formulario=formulario, confirmado=False)
+            return render_template("publico/lgpd.html", formulario=formulario, confirmado="removido")
+        tipo = formulario.tipo.data if formulario.tipo.data in ("remocao", "alteracao") else "remocao"
+        motivo = (formulario.motivo.data or "").strip()
+        if tipo == "alteracao" and len(motivo) < 3:
+            formulario.motivo.errors.append("Descreva a alteração do cadastro.")
+        else:
+            resultado = processar_pedido(
+                formulario.email.data,
+                formulario.whatsapp.data,
+                motivo,
+                tipo,
+            )
+            if resultado == "removido":
+                return render_template("publico/lgpd.html", formulario=formulario, confirmado="removido")
+            if resultado == "pendente":
+                return render_template("publico/lgpd.html", formulario=formulario, confirmado="alteracao")
+            formulario.email.errors.append("Não encontramos um cadastro com esse e-mail e esse WhatsApp.")
+    return render_template("publico/lgpd.html", formulario=formulario, confirmado="")

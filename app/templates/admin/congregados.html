@@ -14,12 +14,15 @@
         </thead>
         <tbody>
           {% for atual in itens %}
-            <tr class="border-b border-stone-100">
-              <td class="p-3"><a class="text-vinho" href="{{ url_for('admin.congregado', item_id=atual.id) }}">{{ atual.nome }}</a></td>
+            <tr class="border-b border-stone-100 {% if item and item.id == atual.id %}bg-creme{% endif %}">
+              <td class="p-3">
+                <p>{{ atual.nome }}</p>
+                <a class="mt-2 inline-block text-vinho" href="{{ url_for('admin.congregado', item_id=atual.id) }}">Editar</a>
+              </td>
               <td class="p-3">{{ atual.email }}</td>
               <td class="p-3">{{ atual.numero_internacional or atual.whatsapp }}</td>
               <td class="p-3">{{ atual.opt_in_status }}</td>
-              <td class="p-3">{{ "removido" if atual.anonimizado else atual.status_envio }}</td>
+              <td class="p-3">{{ atual.status_envio }}</td>
             </tr>
           {% else %}
             <tr><td class="p-3 text-stone-600" colspan="5">Nenhum congregado.</td></tr>
@@ -29,7 +32,18 @@
     </section>
     <form class="rounded-[1.5rem] bg-white p-6 shadow" method="post" action="{{ url_for('admin.congregado', item_id=item.id) if item else url_for('admin.congregados') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <h2 class="font-serif text-2xl">{{ "Editar" if item else "Novo congregado" }}</h2>
+      <div class="flex items-start justify-between gap-3">
+        <h2 class="font-serif text-2xl">{{ "Editar congregado" if item else "Novo congregado" }}</h2>
+        {% if item %}<a class="text-sm text-vinho" href="{{ url_for('admin.congregados') }}">Novo cadastro</a>{% endif %}
+      </div>
+      {% if item %}
+        <p class="mt-2 text-sm text-stone-600">Altere nome, e-mail, WhatsApp ou subsede e salve. O pedido de alteração pendente deste cadastro fica marcado como feito.</p>
+        {% for pedido in pedidos %}
+          {% if pedido.congregado_id == item.id and pedido.tipo == "alteracao" and pedido.resultado == "pendente" %}
+            <p class="mt-3 rounded-2xl bg-creme px-4 py-3 text-sm">Pedido de alteração: {{ pedido.motivo }}</p>
+          {% endif %}
+        {% endfor %}
+      {% endif %}
       <label class="mt-4 block text-sm">Nome<input class="{{ campo }}" name="nome" value="{{ request.form.get('nome', item.nome if item else '') }}" required></label>
       <label class="mt-4 block text-sm">E-mail<input class="{{ campo }}" name="email" type="email" value="{{ request.form.get('email', item.email if item else '') }}" required></label>
       <label class="mt-4 block text-sm">WhatsApp<input class="{{ campo }}" name="whatsapp" data-whatsapp="1" inputmode="tel" placeholder="(21) 99999-9999" value="{{ request.form.get('whatsapp', item.whatsapp if item else '') }}" required></label>
@@ -50,10 +64,30 @@
     </form>
   </div>
   <section class="mt-8 rounded-[1.5rem] bg-white p-6 shadow">
-    <h2 class="font-serif text-2xl">Pedidos de remoção (LGPD)</h2>
-    <p class="mt-2 text-sm text-stone-600">O e-mail e o WhatsApp do pedido não ficam aqui. Só a data, o motivo e se o cadastro foi encontrado.</p>
+    <h2 class="font-serif text-2xl">Remoções feitas</h2>
+    <p class="mt-2 text-sm text-stone-600">Cadastros já apagados. O e-mail original não fica guardado.</p>
+    {% for pessoa in removidos %}
+      <p class="mt-3 text-sm">{{ formatar_data_hora_br(pessoa.excluido_em) if pessoa.excluido_em else "Sem data" }} — {{ pessoa.nome }} — {{ pessoa.email }}{% if pessoa.motivo_exclusao %} — {{ pessoa.motivo_exclusao }}{% endif %}</p>
+    {% else %}
+      <p class="mt-3 text-sm text-stone-600">Nenhuma remoção.</p>
+    {% endfor %}
+
+    <h2 class="mt-8 font-serif text-2xl">Pedidos</h2>
+    <p class="mt-2 text-sm text-stone-600">Remoção ou alteração cadastral. A alteração não apaga o cadastro: use Editar para mudar os dados. O e-mail e o WhatsApp do pedido não ficam aqui.</p>
     {% for pedido in pedidos %}
-      <p class="mt-3 text-sm">{{ formatar_data_hora_br(pedido.criado_em) }} — {{ pedido.resultado }}{% if pedido.motivo %} — {{ pedido.motivo }}{% endif %}</p>
+      <div class="mt-4 border-t border-stone-100 pt-4 text-sm">
+        <p>
+          {{ formatar_data_hora_br(pedido.criado_em) }}
+          — {{ "Pedido de alteração cadastral" if pedido.tipo == "alteracao" else "Pedido de remoção" }}
+          — {% if pedido.resultado == "removido" %}remoção feita{% elif pedido.resultado == "pendente" %}aguardando edição{% elif pedido.resultado == "concluida" %}alteração feita{% else %}cadastro não encontrado{% endif %}
+          {% if pedido.motivo %} — {{ pedido.motivo }}{% endif %}
+        </p>
+        {% if pedido.tipo == "remocao" and pedido.resultado == "removido" and pedido.congregado %}
+          <p class="mt-1 text-stone-600">Remoção feita: {{ pedido.congregado.nome }} — {{ pedido.congregado.email }}</p>
+        {% elif pedido.tipo == "alteracao" and pedido.congregado and not pedido.congregado.anonimizado %}
+          <p class="mt-2"><a class="btn-acao border border-vinho px-3 py-2 text-vinho" href="{{ url_for('admin.congregado', item_id=pedido.congregado.id) }}">Editar cadastro de {{ pedido.congregado.nome }}</a></p>
+        {% endif %}
+      </div>
     {% else %}
       <p class="mt-3 text-sm text-stone-600">Nenhum pedido.</p>
     {% endfor %}

@@ -263,6 +263,39 @@ def test_lgpd_remove_os_dados_quando_email_e_whatsapp_conferem(cliente, app):
     assert "Não encontramos" in de_novo.get_data(as_text=True)
 
 
+def test_lgpd_alteracao_mantem_o_cadastro_para_o_painel_editar(cliente, app):
+    with app.app_context():
+        db.session.add(
+            Congregado(
+                nome="Ana Silva",
+                email="ana@igreja.com",
+                whatsapp="(21) 99999-8888",
+                whatsapp_e164="5521999998888",
+                recebe_noticias=True,
+            )
+        )
+        db.session.commit()
+    resposta = cliente.post(
+        "/lgpd",
+        data={
+            "tipo": "alteracao",
+            "email": "ana@igreja.com",
+            "whatsapp": "21999998888",
+            "motivo": "Trocar o WhatsApp",
+        },
+    )
+    assert "Pedido de alteração registrado" in resposta.get_data(as_text=True)
+    with app.app_context():
+        pessoa = Congregado.query.one()
+        assert pessoa.anonimizado is False
+        assert pessoa.email == "ana@igreja.com"
+        pedido = SolicitacaoLgpd.query.one()
+        assert pedido.tipo == "alteracao"
+        assert pedido.resultado == "pendente"
+        assert pedido.congregado_id == pessoa.id
+        assert pedido.motivo == "Trocar o WhatsApp"
+
+
 def test_lgpd_nao_apaga_se_o_whatsapp_nao_confere(cliente, app):
     with app.app_context():
         db.session.add(Congregado(nome="Ana", email="ana@igreja.com", whatsapp="21999998888", whatsapp_e164="5521999998888"))

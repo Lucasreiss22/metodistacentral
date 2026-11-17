@@ -3,7 +3,7 @@
 import re
 
 from flask_wtf import FlaskForm
-from wtforms import BooleanField, SelectField, StringField, TextAreaField
+from wtforms import BooleanField, RadioField, SelectField, StringField, TextAreaField
 from wtforms.validators import DataRequired, ValidationError
 
 _EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -78,9 +78,17 @@ class FormularioCongregado(FlaskForm):
 
 
 class FormularioRemocao(FlaskForm):
-    """Pedido de exclusão. O campo empresa é o honeypot contra robôs."""
+    """Pedido de exclusão ou de alteração. O campo empresa é o honeypot contra robôs."""
 
+    tipo = RadioField(
+        "O que você precisa",
+        choices=[
+            ("remocao", "Remoção dos meus dados"),
+            ("alteracao", "Alteração cadastral"),
+        ],
+        default="remocao",
+    )
     email = StringField("E-mail cadastrado", validators=[_validar_email])
     whatsapp = StringField("WhatsApp cadastrado", validators=[_validar_whatsapp])
-    motivo = TextAreaField("Motivo da saída (opcional)")
+    motivo = TextAreaField("Motivo ou o que deve ser alterado")
     empresa = StringField("Empresa")

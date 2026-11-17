@@ -321,22 +321,34 @@ class AdministradorPermissao(db.Model):
 
 
 class SolicitacaoLgpd(db.Model):
-    """Pedido de exclusão. Não guarda e-mail nem telefone, só o hash."""
+    """Pedido de exclusão ou de alteração. Não guarda e-mail nem telefone, só o hash."""
 
     __tablename__ = "solicitacoes_lgpd"
     __table_args__ = (
         CheckConstraint(
-            "resultado IN ('removido', 'nao_encontrado')",
+            "tipo IN ('remocao', 'alteracao')",
+            name="ck_solicitacoes_lgpd_tipo",
+        ),
+        CheckConstraint(
+            "resultado IN ('removido', 'nao_encontrado', 'pendente', 'concluida')",
             name="ck_solicitacoes_lgpd_resultado",
         ),
     )
 
     id = db.Column(db.Integer, primary_key=True)
+    tipo = db.Column(db.Text, nullable=False, default="remocao")
+    congregado_id = db.Column(
+        db.Integer,
+        db.ForeignKey("congregados.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     email_hash = db.Column(db.Text, nullable=False)
     whatsapp_hash = db.Column(db.Text, nullable=False, default="")
     motivo = db.Column(db.Text, nullable=False, default="")
     resultado = db.Column(db.Text, nullable=False)
     criado_em = db.Column(db.DateTime(timezone=True), nullable=False, default=agora_utc)
+
+    congregado = db.relationship("Congregado")
 
     def __repr__(self) -> str:
         return f"<SolicitacaoLgpd {self.id}>"

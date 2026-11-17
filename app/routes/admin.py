@@ -580,6 +580,7 @@ def excluir_feriado(item_id):
 
 
 def _salvar_congregado(item: Congregado | None):
+    editando = item is not None
     nome = _texto("nome")
     email = normalizar_email(_texto("email"))
     whatsapp = _texto("whatsapp")
@@ -605,10 +606,28 @@ def _salvar_congregado(item: Congregado | None):
             item.status_envio = "nunca_enviado"
     else:
         aplicar_opt_out(item)
+    if editando:
+        SolicitacaoLgpd.query.filter_by(
+            congregado_id=item.id,
+            tipo="alteracao",
+            resultado="pendente",
+        ).update({"resultado": "concluida"}, synchronize_session=False)
     if not _gravar():
         flash("Já existe um congregado com este e-mail.")
         return None
     return item
+
+
+def _dados_congregados(item):
+    return {
+        "itens": Congregado.query.filter_by(anonimizado=False).order_by(Congregado.nome.asc()).all(),
+        "removidos": Congregado.query.filter_by(anonimizado=True)
+        .order_by(Congregado.excluido_em.desc(), Congregado.id.desc())
+        .all(),
+        "subsedes": _subsedes(),
+        "item": item,
+        "pedidos": SolicitacaoLgpd.query.order_by(SolicitacaoLgpd.criado_em.desc()).limit(30).all(),
+    }
 
 
 @bp.route("/congregados", methods=["GET", "POST"])
@@ -616,30 +635,18 @@ def congregados():
     if request.method == "POST" and _salvar_congregado(None):
         flash("Congregado salvo.")
         return redirect(url_for("admin.congregados"))
-    return render_template(
-        "admin/congregados.html",
-        itens=Congregado.query.order_by(Congregado.anonimizado.asc(), Congregado.nome.asc()).all(),
-        subsedes=_subsedes(),
-        item=None,
-        pedidos=SolicitacaoLgpd.query.order_by(SolicitacaoLgpd.criado_em.desc()).limit(20).all(),
-    )
+    return render_template("admin/congregados.html", **_dados_congregados(None))
 
 
 @bp.route("/congregados/<int:item_id>", methods=["GET", "POST"])
 def congregado(item_id):
     item = db.session.get(Congregado, item_id)
-    if item is None:
+    if item is None or item.anonimizado:
         abort(404)
     if request.method == "POST" and _salvar_congregado(item):
         flash("Congregado salvo.")
         return redirect(url_for("admin.congregados"))
-    return render_template(
-        "admin/congregados.html",
-        itens=Congregado.query.order_by(Congregado.anonimizado.asc(), Congregado.nome.asc()).all(),
-        subsedes=_subsedes(),
-        item=item,
-        pedidos=SolicitacaoLgpd.query.order_by(SolicitacaoLgpd.criado_em.desc()).limit(20).all(),
-    )
+    return render_template("admin/congregados.html", **_dados_congregados(item))
 
 
 @bp.get("/congregados.csv")
